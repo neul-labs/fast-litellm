@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=40", "wheel", "setuptools-rust>=1.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "litellm-rust"
+version = "0.1.0"
+description = "High-performance Rust acceleration for LiteLLM components"
+authors = [
+    {name = "LiteLLM Rust Team", email = "team@example.com"},
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+]
+dependencies = [
+    "litellm>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-benchmark>=3.4",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-username/litellm-rust"
+Repository = "https://github.com/your-username/litellm-rust"
+Issues = "https://github.com/your-username/litellm-rust/issues"
+
+[tool.setuptools.packages.find]
+include = ["litellm_rust*"]
+
+[tool.setuptools.package-data]
+litellm_rust = ["*.so", "*.dylib", "*.dll", "py.typed"]
+
+[tool.setuptools.exclude-package-data]
+litellm_rust = ["*.rs", "Cargo.toml", "target/*"]
+
+[tool.setuptools]
+zip-safe = false

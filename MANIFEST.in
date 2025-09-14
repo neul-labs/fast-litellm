@@ -1,0 +1,16 @@
+include README.md
+include LICENSE
+include requirements.txt
+include requirements-dev.txt
+recursive-include litellm_rust *.py
+recursive-include tests *.py
+recursive-include examples *.py
+recursive-include docs *.md
+recursive-include litellm-core src/*.rs
+recursive-include litellm-core Cargo.toml
+recursive-include litellm-token src/*.rs
+recursive-include litellm-token Cargo.toml
+recursive-include litellm-connection-pool src/*.rs
+recursive-include litellm-connection-pool Cargo.toml
+recursive-include litellm-rate-limiter src/*.rs
+recursive-include litellm-rate-limiter Cargo.toml

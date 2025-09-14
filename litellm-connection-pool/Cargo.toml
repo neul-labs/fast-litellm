@@ -1,0 +1,21 @@
+[package]
+name = "litellm-connection-pool"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "litellm_connection_pool"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { workspace = true, features = ["extension-module"] }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+tokio-test = "0.4"
