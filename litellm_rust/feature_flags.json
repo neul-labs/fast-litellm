@@ -1,0 +1,52 @@
+{
+  "features": {
+    "rust_routing": {
+      "state": "enabled",
+      "rollout_percentage": 100.0,
+      "error_threshold": 10,
+      "performance_threshold_ms": 500.0
+    },
+    "rust_token_counting": {
+      "state": "enabled",
+      "rollout_percentage": 100.0,
+      "error_threshold": 5,
+      "performance_threshold_ms": 100.0
+    },
+    "rust_rate_limiting": {
+      "state": "gradual_rollout",
+      "rollout_percentage": 75.0,
+      "error_threshold": 3,
+      "performance_threshold_ms": 50.0
+    },
+    "rust_connection_pooling": {
+      "state": "gradual_rollout",
+      "rollout_percentage": 50.0,
+      "error_threshold": 5,
+      "performance_threshold_ms": 200.0
+    },
+    "batch_token_counting": {
+      "state": "canary",
+      "rollout_percentage": 10.0,
+      "error_threshold": 2,
+      "performance_threshold_ms": 80.0
+    },
+    "async_routing": {
+      "state": "shadow",
+      "rollout_percentage": 5.0,
+      "error_threshold": 1,
+      "performance_threshold_ms": 300.0
+    },
+    "performance_monitoring": {
+      "state": "enabled",
+      "rollout_percentage": 100.0,
+      "error_threshold": 100,
+      "performance_threshold_ms": 1000.0
+    }
+  },
+  "global_settings": {
+    "enable_automatic_degradation": true,
+    "enable_performance_alerts": true,
+    "metrics_retention_hours": 24,
+    "alert_file": "/tmp/litellm_rust_alerts.log"
+  }
+}

@@ -1,0 +1,42 @@
+# Type stubs for litellm_rust
+
+from typing import Dict, List, Optional, Any, Union
+
+# Constants
+RUST_ACCELERATION_AVAILABLE: bool
+__version__: str
+
+# Core functions
+def apply_acceleration() -> bool: ...
+def remove_acceleration() -> None: ...
+def health_check() -> Dict[str, Any]: ...
+
+# Feature flag functions
+def is_enabled(feature_name: str, request_id: Optional[str] = None) -> bool: ...
+def get_feature_status() -> Dict[str, Any]: ...
+def reset_errors(feature_name: Optional[str] = None) -> None: ...
+
+# Performance monitoring functions
+def record_performance(
+    component: str,
+    operation: str,
+    duration_ms: float,
+    success: bool = True,
+    input_size: Optional[int] = None,
+    output_size: Optional[int] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> None: ...
+
+def get_performance_stats(component: Optional[str] = None) -> Dict[str, Any]: ...
+
+def compare_implementations(
+    rust_component: str, python_component: str
+) -> Dict[str, Any]: ...
+
+def get_recommendations() -> List[Dict[str, Any]]: ...
+
+def export_performance_data(
+    component: Optional[str] = None, format: str = "json"
+) -> str: ...
+
+def get_patch_status() -> Dict[str, Any]: ...

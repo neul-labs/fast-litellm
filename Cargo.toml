@@ -1,18 +1,17 @@
-[workspace]
-members = [
-    "litellm-core",
-    "litellm-token",
-    "litellm-connection-pool",
-    "litellm-rate-limiter",
-]
-resolver = "2"
-
-[workspace.package]
+[package]
+name = "litellm-rust"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.70"
+description = "High-performance Rust acceleration for LiteLLM"
+license = "MIT"
+repository = "https://github.com/BerriAI/litellm-rust"
 
-[workspace.dependencies]
+[lib]
+name = "litellm_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
 pyo3 = { version = "0.20", features = ["extension-module"] }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -22,8 +21,18 @@ tracing = "0.1"
 tracing-subscriber = "0.3"
 rand = "0.8"
 tiktoken-rs = "0.7.0"
+dashmap = "6.0"
+lazy_static = "1.4"
+
+[dev-dependencies]
+tokio-test = "0.4"
+pyo3-asyncio = { version = "0.20", features = ["tokio-runtime"] }
 
 [profile.release]
 lto = true
 codegen-units = 1
 strip = true
+
+[features]
+default = []
+extension-module = ["pyo3/extension-module"]

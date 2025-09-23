@@ -1,3 +1,0 @@
-# Requirements for LiteLLM Rust Accelerator
-pydantic>=1.9.0,<3.0.0
-tiktoken>=0.7.0

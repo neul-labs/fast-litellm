@@ -1,2 +1,0 @@
-litellm>=1.0.0
-setuptools-rust>=1.0.0

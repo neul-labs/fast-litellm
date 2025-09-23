@@ -1,4 +1,0 @@
-litellm>=1.0.0
-setuptools-rust>=1.0.0
-pytest>=6.0
-pytest-benchmark>=3.4

@@ -2,66 +2,116 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main ]
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
-    
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-        override: true
-    
+    - uses: actions/checkout@v4
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    
-    - name: Install dependencies
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Install maturin
+      run: pip install maturin[patchelf]
+
+    - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements-dev.txt
-    
+        pip install pytest pytest-cov pytest-asyncio
+
     - name: Build package
+      run: maturin develop
+
+    - name: Run tests
       run: |
-        pip install -e .
-    
-    - name: Run Python tests
-      run: |
-        python -m pytest tests/ -v
-    
-    - name: Run Rust tests
-      run: |
-        cargo test
+        python -m pytest tests/ -v --cov=litellm_rust --cov-report=xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
 
   lint:
     runs-on: ubuntu-latest
-    
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
-        profile: minimal
-        override: true
-    
-    - name: Check formatting
+        components: rustfmt, clippy
+
+    - name: Install Python linting tools
       run: |
-        cargo fmt -- --check
-    
-    - name: Run clippy
-      run: |
-        cargo clippy -- -D warnings
+        python -m pip install --upgrade pip
+        pip install black isort flake8 mypy
+
+    - name: Check Python formatting
+      run: black --check .
+
+    - name: Check Python imports
+      run: isort --check-only .
+
+    - name: Lint Python
+      run: flake8 .
+
+    - name: Type check Python
+      run: mypy litellm_rust/
+
+    - name: Format Rust code
+      run: cargo fmt --all -- --check
+
+    - name: Lint Rust code
+      run: cargo clippy --all-targets --all-features -- -D warnings
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-audit
+      run: cargo install cargo-audit
+
+    - name: Run security audit
+      run: cargo audit
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install safety
+      run: pip install safety
+
+    - name: Run Python security check
+      run: safety check

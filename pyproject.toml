@@ -1,21 +1,41 @@
 [build-system]
-requires = ["setuptools>=40", "wheel", "setuptools-rust>=1.0.0"]
-build-backend = "setuptools.build_meta"
+requires = [
+    "setuptools>=45",
+    "wheel",
+    "setuptools-rust>=1.5.1",
+    "maturin>=1.0,<2.0",
+]
+build-backend = "maturin"
 
 [project]
 name = "litellm-rust"
-version = "0.1.0"
-description = "High-performance Rust acceleration for LiteLLM components"
-authors = [
-    {name = "LiteLLM Rust Team", email = "team@example.com"},
-]
-license = {text = "MIT"}
+description = "High-performance Rust acceleration for LiteLLM"
 readme = "README.md"
-requires-python = ">=3.8"
+license = {file = "LICENSE"}
+authors = [
+    {name = "LiteLLM Rust Contributors"}
+]
+maintainers = [
+    {name = "LiteLLM Rust Contributors"}
+]
+dynamic = ["version"]
+keywords = [
+    "llm",
+    "ai",
+    "performance",
+    "rust",
+    "acceleration",
+    "litellm",
+    "openai",
+    "anthropic",
+    "tokens",
+    "routing",
+]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
@@ -23,30 +43,191 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Networking",
+    "Typing :: Typed",
 ]
+requires-python = ">=3.8"
 dependencies = [
-    "litellm>=1.0.0",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=6.0",
-    "pytest-benchmark>=3.4",
+    "pydantic>=1.10.0",
+    "tiktoken>=0.5.0",
+    "aiohttp>=3.8.0",
+    "httpx>=0.24.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-username/litellm-rust"
-Repository = "https://github.com/your-username/litellm-rust"
-Issues = "https://github.com/your-username/litellm-rust/issues"
+Homepage = "https://github.com/BerriAI/litellm-rust"
+Documentation = "https://github.com/BerriAI/litellm-rust/tree/main/docs"
+Repository = "https://github.com/BerriAI/litellm-rust.git"
+"Bug Tracker" = "https://github.com/BerriAI/litellm-rust/issues"
+Changelog = "https://github.com/BerriAI/litellm-rust/blob/main/CHANGELOG.md"
 
-[tool.setuptools.packages.find]
-include = ["litellm_rust*"]
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-benchmark>=4.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-xdist>=3.0.0",
 
-[tool.setuptools.package-data]
-litellm_rust = ["*.so", "*.dylib", "*.dll", "py.typed"]
+    # Code quality
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
 
-[tool.setuptools.exclude-package-data]
-litellm_rust = ["*.rs", "Cargo.toml", "target/*"]
+    # Documentation
+    "sphinx>=5.0.0",
+    "sphinx-rtd-theme>=1.2.0",
+    "myst-parser>=0.18.0",
+
+    # Build and packaging
+    "build>=0.10.0",
+    "twine>=4.0.0",
+    "maturin>=1.0,<2.0",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-benchmark>=4.0.0",
+    "pytest-cov>=4.0.0",
+]
+docs = [
+    "sphinx>=5.0.0",
+    "sphinx-rtd-theme>=1.2.0",
+    "myst-parser>=0.18.0",
+]
+
+[tool.maturin]
+python-source = "litellm_rust"
+module-name = "litellm_rust._rust"
+features = ["pyo3/extension-module"]
+
 
 [tool.setuptools]
 zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["litellm_rust*"]
+exclude = ["tests*", "examples*", "docs*"]
+
+[tool.setuptools.package-data]
+litellm_rust = ["py.typed", "*.pyi"]
+
+# Tool configurations
+[tool.black]
+line-length = 88
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | target
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["litellm_rust"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "litellm_rust.rust_extensions.*",
+]
+ignore_errors = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=litellm_rust",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+testpaths = ["tests"]
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "benchmark: marks tests as benchmarks",
+]
+
+[tool.coverage.run]
+source = ["litellm_rust"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "setup.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.ruff]
+target-version = "py38"
+line-length = 88
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*" = ["B011"]

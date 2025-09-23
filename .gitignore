@@ -129,7 +129,11 @@ dmypy.json
 # rust
 target/
 **/*.rs.bk
-Cargo.lock
+
+# development environments
+venv/
+test_venv/
+.venv/
 
 # OS generated files
 .DS_Store
