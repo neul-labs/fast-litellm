@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python Versions](https://img.shields.io/pypi/pyversions/fast-litellm.svg)](https://pypi.org/project/fast-litellm/)
 
-High-performance Rust acceleration for [LiteLLM](https://github.com/BerriAI/litellm) - providing 2-20x performance improvements for token counting, routing, rate limiting, and connection management.
+High-performance Rust acceleration for [LiteLLM](https://github.com/BerriAI/litellm) - targeting 2-20x performance improvements for token counting, routing, rate limiting, and connection management.
 
 ## Why Fast LiteLLM?
 
