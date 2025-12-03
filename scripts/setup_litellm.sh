@@ -84,7 +84,7 @@ setup_venv() {
 
     # Install essential build tools
     echo "Installing build tools (maturin, pytest)..."
-    uv pip install maturin pytest pytest-asyncio
+    uv add --dev maturin pytest pytest-asyncio
 }
 
 # Check for uv, install if needed
@@ -151,9 +151,9 @@ echo "Installing LiteLLM dependencies..."
 cd "$LITELLM_DIR"
 
 # Try to install LiteLLM with proxy support, fall back to minimal
-if uv pip install -e ".[proxy]" 2>/dev/null; then
+if uv add --editable ".[proxy]" 2>/dev/null; then
     echo "LiteLLM installed with proxy support"
-elif uv pip install -e . 2>/dev/null; then
+elif uv add --editable . 2>/dev/null; then
     echo "LiteLLM installed (minimal)"
 else
     echo "Error: Failed to install LiteLLM"
@@ -161,7 +161,7 @@ else
     echo "This might be due to missing system dependencies."
     echo "Try installing them manually:"
     echo "  cd $LITELLM_DIR"
-    echo "  uv pip install -e ."
+    echo "  uv add --editable ."
     exit 1
 fi
 

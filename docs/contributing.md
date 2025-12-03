@@ -36,7 +36,7 @@ uv venv
 source .venv/bin/activate
 
 # Install dependencies
-uv pip install -e ".[dev]"
+uv sync --all-extras
 
 # Build Rust extensions
 uv run maturin develop

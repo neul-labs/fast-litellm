@@ -23,7 +23,7 @@ Built with PyO3 and Rust, it seamlessly integrates with existing LiteLLM code wi
 
 ```bash
 # Using uv (recommended)
-uv pip install fast-litellm
+uv add fast-litellm
 
 # Or using pip
 pip install fast-litellm
@@ -135,13 +135,13 @@ uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install maturin
-uv pip install maturin
+uv add --dev maturin
 
 # Build and install in development mode
 uv run maturin develop
 
 # Run unit tests
-uv pip install pytest pytest-asyncio
+uv add --dev pytest pytest-asyncio
 uv run pytest tests/
 ```
 

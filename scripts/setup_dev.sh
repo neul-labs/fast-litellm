@@ -53,11 +53,11 @@ source .venv/bin/activate
 
 # Install maturin
 echo "Installing maturin..."
-uv pip install maturin
+uv add --dev maturin
 
 # Install development dependencies
 echo "Installing development dependencies..."
-uv pip install -e ".[dev]"
+uv sync --all-extras
 
 # Build the Rust extensions in development mode
 echo "Building Rust extensions in development mode..."

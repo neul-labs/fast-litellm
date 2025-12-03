@@ -45,7 +45,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv pip install maturin[patchelf] pytest pytest-cov pytest-asyncio
+        uv add --dev maturin[patchelf] pytest pytest-cov pytest-asyncio
 
     - name: Build package
       run: uv run maturin develop
@@ -85,7 +85,7 @@ jobs:
 
     - name: Install Python linting tools
       run: |
-        uv pip install black isort flake8 mypy
+        uv add --dev black isort flake8 mypy
 
     - name: Check Python formatting
       run: uv run black --check .
@@ -131,7 +131,7 @@ jobs:
       run: uv venv --python 3.11
 
     - name: Install pip-audit
-      run: uv pip install pip-audit
+      run: uv add --dev pip-audit
 
     - name: Run Python security check
       run: uv run pip-audit

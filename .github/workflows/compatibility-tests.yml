@@ -54,15 +54,15 @@ jobs:
 
       - name: Install Fast LiteLLM
         run: |
-          uv pip install maturin pytest pytest-asyncio
+          uv add --dev maturin pytest pytest-asyncio
           uv run maturin develop --release
 
       - name: Install LiteLLM ${{ matrix.litellm-version }}
         run: |
           if [ "${{ matrix.litellm-version }}" = "latest" ]; then
-            uv pip install litellm
+            uv add litellm
           else
-            uv pip install "git+https://github.com/BerriAI/litellm.git@${{ matrix.litellm-version }}"
+            uv add "git+https://github.com/BerriAI/litellm.git@${{ matrix.litellm-version }}"
           fi
 
       - name: Test import and basic functionality
@@ -120,6 +120,6 @@ jobs:
 
       - name: Build and test
         run: |
-          uv pip install maturin pytest pytest-asyncio
+          uv add --dev maturin pytest pytest-asyncio
           uv run maturin develop --release
           uv run pytest tests/ -v --tb=short

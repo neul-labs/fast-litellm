@@ -165,7 +165,7 @@ jobs:
       - name: Test installation from Test PyPI
         run: |
           uv venv --python 3.11
-          uv pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ fast-litellm
+          uv add --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ fast-litellm
           uv run python -c "import fast_litellm; print('Package installed successfully')"
 
   release:

@@ -18,7 +18,7 @@ uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install maturin and development dependencies
-uv pip install maturin
+uv add --dev maturin
 
 # Development build (creates editable install)
 uv run maturin develop
