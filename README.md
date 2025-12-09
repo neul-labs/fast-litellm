@@ -104,19 +104,25 @@ export FAST_LITELLM_FEATURE_CONFIG=/path/to/config.json
 
 See the configuration section in [CLAUDE.md](CLAUDE.md) for more options.
 
-## Requirements
+## Compatibility
 
-- Python 3.8 or higher
-- LiteLLM
+| Component | Supported Versions |
+|-----------|-------------------|
+| **Python** | 3.9, 3.10, 3.11, 3.12, 3.13 |
+| **Platforms** | Linux (x86_64, aarch64), macOS (x86_64, ARM64), Windows (x86_64) |
+| **LiteLLM** | Latest stable release |
+| **PyO3** | 0.24+ |
 
 Rust is **not** required for installation - prebuilt wheels are available for all major platforms.
+
+For detailed compatibility information, see [COMPATIBILITY.md](COMPATIBILITY.md).
 
 ## Development
 
 To contribute or build from source:
 
 **Prerequisites:**
-- Python 3.8+
+- Python 3.9+
 - Rust toolchain (1.70+)
 - [uv](https://docs.astral.sh/uv/) for package management (recommended)
 - [maturin](https://www.maturin.rs/) for building Python extensions

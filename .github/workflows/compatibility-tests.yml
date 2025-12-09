@@ -16,70 +16,14 @@ on:
         default: 'main'
 
 jobs:
-  compatibility-check:
-    name: LiteLLM Compatibility
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: "latest"
-
-      - name: Set up Python
-        run: uv python install 3.11
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Create virtual environment
-        run: uv venv --python 3.11
-
-      - name: Install Fast LiteLLM
-        run: |
-          uv add --dev maturin pytest pytest-asyncio
-          uv run maturin develop --release
-
-      - name: Install LiteLLM
-        run: uv add litellm
-
-      - name: Test import and basic functionality
-        run: |
-          uv run python -c "
-          import fast_litellm
-          import litellm
-          from importlib.metadata import version
-
-          print(f'Fast LiteLLM: {fast_litellm.__version__}')
-          print(f'LiteLLM: {version(\"litellm\")}')
-          print(f'Rust acceleration: {fast_litellm.RUST_ACCELERATION_AVAILABLE}')
-
-          # Basic health check
-          health = fast_litellm.health_check()
-          print(f'Health check: {health}')
-
-          # Check Rust is available
-          assert fast_litellm.RUST_ACCELERATION_AVAILABLE, 'Rust acceleration not available'
-          print('Compatibility check passed!')
-          "
-
-      - name: Run tests with LiteLLM installed
-        run: |
-          uv run pytest tests/ -v --tb=short -p no:cov
-
-  cross-platform:
-    name: Cross-platform build
+  compatibility-matrix:
+    name: Python ${{ matrix.python-version }} / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
-        python-version: ['3.11']
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
 
     steps:
       - name: Checkout
@@ -102,9 +46,261 @@ jobs:
       - name: Create virtual environment
         run: uv venv --python ${{ matrix.python-version }}
 
-      - name: Build and test
+      - name: Install dependencies
         run: |
           uv add --dev maturin pytest pytest-asyncio
           uv add litellm
-          uv run maturin develop --release
-          uv run pytest tests/ -v --tb=short -p no:cov
+
+      - name: Build Fast LiteLLM
+        id: build
+        run: uv run maturin develop --release
+
+      - name: Run compatibility tests
+        id: tests
+        run: |
+          uv run pytest tests/ -v --tb=short -p no:cov --junit-xml=test-results.xml
+
+      - name: Collect compatibility info
+        id: info
+        shell: bash
+        run: |
+          uv run python -c "
+          import json
+          import platform
+          import sys
+          from importlib.metadata import version
+
+          import fast_litellm
+
+          info = {
+              'python_version': f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}',
+              'platform': platform.system(),
+              'platform_version': platform.version(),
+              'architecture': platform.machine(),
+              'fast_litellm_version': fast_litellm.__version__,
+              'litellm_version': version('litellm'),
+              'rust_available': fast_litellm.RUST_ACCELERATION_AVAILABLE,
+              'health_check': fast_litellm.health_check(),
+          }
+
+          # Write to file for artifact
+          with open('compatibility-info.json', 'w') as f:
+              json.dump(info, f, indent=2, default=str)
+
+          print(json.dumps(info, indent=2, default=str))
+          "
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: |
+            test-results.xml
+            compatibility-info.json
+
+  generate-report:
+    name: Generate Compatibility Report
+    needs: compatibility-matrix
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: |
+          uv python install 3.11
+          uv venv --python 3.11
+
+      - name: Generate compatibility report
+        run: |
+          uv run python << 'EOF'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          # Collect all compatibility info
+          results = []
+          artifacts_dir = Path("artifacts")
+
+          for artifact_dir in artifacts_dir.iterdir():
+              if artifact_dir.is_dir():
+                  info_file = artifact_dir / "compatibility-info.json"
+                  test_file = artifact_dir / "test-results.xml"
+
+                  if info_file.exists():
+                      with open(info_file) as f:
+                          info = json.load(f)
+
+                      # Parse test results if available
+                      test_passed = True
+                      test_count = 0
+                      if test_file.exists():
+                          import xml.etree.ElementTree as ET
+                          try:
+                              tree = ET.parse(test_file)
+                              root = tree.getroot()
+                              testsuite = root.find('.//testsuite') or root
+                              test_count = int(testsuite.get('tests', 0))
+                              failures = int(testsuite.get('failures', 0))
+                              errors = int(testsuite.get('errors', 0))
+                              test_passed = (failures + errors) == 0
+                          except Exception as e:
+                              print(f"Warning: Could not parse {test_file}: {e}")
+
+                      info['tests_passed'] = test_passed
+                      info['test_count'] = test_count
+                      results.append(info)
+
+          # Sort results
+          results.sort(key=lambda x: (x['platform'], x['python_version']))
+
+          # Generate markdown report
+          report = []
+          report.append("# Compatibility Report")
+          report.append("")
+          report.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
+          report.append("")
+
+          # Summary table
+          report.append("## Test Matrix Results")
+          report.append("")
+          report.append("| Platform | Python | Fast LiteLLM | LiteLLM | Rust | Tests | Status |")
+          report.append("|----------|--------|--------------|---------|------|-------|--------|")
+
+          for r in results:
+              status = "✅ Pass" if r.get('tests_passed', False) else "❌ Fail"
+              rust = "✅" if r.get('rust_available', False) else "❌"
+              tests = r.get('test_count', 'N/A')
+              report.append(
+                  f"| {r['platform']} | {r['python_version']} | "
+                  f"{r.get('fast_litellm_version', 'N/A')} | "
+                  f"{r.get('litellm_version', 'N/A')} | "
+                  f"{rust} | {tests} | {status} |"
+              )
+
+          report.append("")
+
+          # Platform summary
+          report.append("## Platform Summary")
+          report.append("")
+
+          platforms = {}
+          for r in results:
+              p = r['platform']
+              if p not in platforms:
+                  platforms[p] = {'passed': 0, 'failed': 0, 'versions': []}
+              if r.get('tests_passed', False):
+                  platforms[p]['passed'] += 1
+              else:
+                  platforms[p]['failed'] += 1
+              platforms[p]['versions'].append(r['python_version'])
+
+          for platform, data in platforms.items():
+              total = data['passed'] + data['failed']
+              status = "✅" if data['failed'] == 0 else "⚠️"
+              report.append(f"### {platform} {status}")
+              report.append("")
+              report.append(f"- **Tested Python versions**: {', '.join(sorted(set(data['versions'])))}")
+              report.append(f"- **Passed**: {data['passed']}/{total}")
+              if data['failed'] > 0:
+                  report.append(f"- **Failed**: {data['failed']}/{total}")
+              report.append("")
+
+          # Python version summary
+          report.append("## Python Version Summary")
+          report.append("")
+
+          py_versions = {}
+          for r in results:
+              v = r['python_version']
+              if v not in py_versions:
+                  py_versions[v] = {'passed': 0, 'failed': 0}
+              if r.get('tests_passed', False):
+                  py_versions[v]['passed'] += 1
+              else:
+                  py_versions[v]['failed'] += 1
+
+          report.append("| Python Version | Platforms Passed | Platforms Failed | Status |")
+          report.append("|----------------|------------------|------------------|--------|")
+
+          for v in sorted(py_versions.keys()):
+              data = py_versions[v]
+              status = "✅" if data['failed'] == 0 else "❌"
+              report.append(f"| {v} | {data['passed']} | {data['failed']} | {status} |")
+
+          report.append("")
+
+          # Dependencies
+          if results:
+              r = results[0]
+              report.append("## Tested Versions")
+              report.append("")
+              report.append(f"- **Fast LiteLLM**: {r.get('fast_litellm_version', 'N/A')}")
+              report.append(f"- **LiteLLM**: {r.get('litellm_version', 'N/A')}")
+              report.append("")
+
+          # Write report
+          report_content = "\n".join(report)
+          with open("COMPATIBILITY_REPORT.md", "w") as f:
+              f.write(report_content)
+
+          print(report_content)
+          EOF
+
+      - name: Upload compatibility report
+        uses: actions/upload-artifact@v4
+        with:
+          name: compatibility-report
+          path: COMPATIBILITY_REPORT.md
+
+      - name: Post report to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('COMPATIBILITY_REPORT.md', 'utf8');
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('# Compatibility Report')
+            );
+
+            const body = report + '\n\n---\n*This report is automatically generated by the compatibility tests workflow.*';
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }

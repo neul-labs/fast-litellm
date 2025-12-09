@@ -78,34 +78,36 @@ class TestRustFunctions:
         print(f"Performance stats: {stats}")
 
 
+# Check if litellm is available
+try:
+    import litellm
+
+    HAS_LITELLM = True
+except ImportError:
+    HAS_LITELLM = False
+
+
+@pytest.mark.skipif(not HAS_LITELLM, reason="litellm not installed")
 class TestRustWithLiteLLM:
     """Test that Rust acceleration works with LiteLLM imports"""
 
     def test_import_litellm_after_acceleration(self):
         """Import LiteLLM after Fast LiteLLM and verify no errors"""
         # This should work without errors if acceleration is properly applied
-        try:
-            import litellm
+        import litellm
 
-            assert litellm is not None
-            print("✓ LiteLLM imported successfully with acceleration")
-        except Exception as e:
-            pytest.fail(f"Failed to import LiteLLM with acceleration: {e}")
+        assert litellm is not None
+        print("✓ LiteLLM imported successfully with acceleration")
 
     def test_litellm_model_info(self):
         """Test that LiteLLM model info still works"""
-        import litellm
+        from litellm import get_model_info
 
         # Basic utility that should still work
-        try:
-            from litellm import get_model_info
-
-            info = get_model_info("gpt-3.5-turbo")
-            assert info is not None
-            assert "max_tokens" in info or "max_input_tokens" in info
-            print(f"✓ Model info works: {list(info.keys())[:5]}")
-        except Exception as e:
-            pytest.fail(f"Model info failed with acceleration: {e}")
+        info = get_model_info("gpt-3.5-turbo")
+        assert info is not None
+        assert "max_tokens" in info or "max_input_tokens" in info
+        print(f"✓ Model info works: {list(info.keys())[:5]}")
 
 
 if __name__ == "__main__":
