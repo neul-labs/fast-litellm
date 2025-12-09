@@ -78,12 +78,14 @@ class TestRustFunctions:
         print(f"Performance stats: {stats}")
 
 
-# Check if litellm is available
+# Check if litellm is available and compatible with this Python version
 try:
-    import litellm
+    import litellm as _litellm_check  # noqa: F401
 
     HAS_LITELLM = True
-except ImportError:
+except (ImportError, TypeError):
+    # TypeError occurs when litellm uses Python 3.10+ syntax (e.g., str | List[str])
+    # on older Python versions
     HAS_LITELLM = False
 
 

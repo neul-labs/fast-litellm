@@ -15,8 +15,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # CRITICAL: Import fast_litellm FIRST to enable Rust acceleration
 import fast_litellm
 
-# Try to import litellm - skip tests if not available
-litellm = pytest.importorskip("litellm", reason="litellm not installed")
+# Try to import litellm - skip all tests if not available or incompatible
+try:
+    import litellm
+except (ImportError, TypeError) as e:
+    # TypeError occurs when litellm uses Python 3.10+ syntax on older Python
+    pytest.skip(f"litellm not available: {e}", allow_module_level=True)
 
 
 class TestRustTokenCounting:

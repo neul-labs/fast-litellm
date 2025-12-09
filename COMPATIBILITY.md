@@ -67,6 +67,8 @@ Fast LiteLLM is designed to work with the latest stable release of LiteLLM. Comp
 | Latest stable | Tested in CI |
 | Previous releases | Best effort |
 
+**Note:** Recent versions of LiteLLM use Python 3.10+ syntax (e.g., `str | List[str]`), which means LiteLLM itself may not be compatible with Python 3.9. Fast LiteLLM supports Python 3.9, but integration with LiteLLM on Python 3.9 depends on the LiteLLM version installed.
+
 ## Rust Dependencies
 
 Key Rust crates used:

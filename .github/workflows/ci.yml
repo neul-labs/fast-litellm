@@ -43,9 +43,15 @@ jobs:
     - name: Create virtual environment
       run: uv venv --python ${{ matrix.python-version }}
 
-    - name: Install dependencies
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
       run: |
         uv add --dev maturin[patchelf] pytest pytest-cov pytest-asyncio
+
+    - name: Install dependencies (Windows/macOS)
+      if: runner.os != 'Linux'
+      run: |
+        uv add --dev maturin pytest pytest-cov pytest-asyncio
 
     - name: Build package
       run: uv run maturin develop
