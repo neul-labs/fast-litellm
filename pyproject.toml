@@ -37,6 +37,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Rust",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -98,6 +99,7 @@ docs = [
 python-source = "."
 module-name = "fast_litellm._rust"
 features = ["pyo3/extension-module"]
+interpreter = ["python3.8", "python3.9", "python3.10", "python3.11", "python3.12", "python3.13"]
 
 # Tool configurations
 [tool.black]
