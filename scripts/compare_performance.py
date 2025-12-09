@@ -9,26 +9,27 @@ This script runs the same tests twice:
 Then compares execution time, results, and generates a report.
 """
 
+import argparse
+import json
 import subprocess
 import sys
 import time
-import json
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-import argparse
 
 
 class Colors:
     """ANSI color codes for terminal output"""
-    HEADER = '\033[95m'
-    BLUE = '\033[94m'
-    CYAN = '\033[96m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    RED = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+
+    HEADER = "\033[95m"
+    BLUE = "\033[94m"
+    CYAN = "\033[96m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
 
 
 def print_header(text: str):
@@ -44,24 +45,28 @@ def print_section(text: str):
     print(f"{Colors.CYAN}{'-'*len(text)}{Colors.ENDC}")
 
 
-def run_tests(test_path: str, with_acceleration: bool, litellm_dir: Path) -> Tuple[int, float, Dict]:
+def run_tests(
+    test_path: str, with_acceleration: bool, litellm_dir: Path
+) -> Tuple[int, float, Dict]:
     """Run tests and return exit code, duration, and stats"""
-    print_section(f"Running tests {'WITH' if with_acceleration else 'WITHOUT'} Fast LiteLLM acceleration")
+    print_section(
+        f"Running tests {'WITH' if with_acceleration else 'WITHOUT'} Fast LiteLLM acceleration"
+    )
 
     # Prepare environment
     env = subprocess.os.environ.copy()
-    env['PYTHONDONTWRITEBYTECODE'] = '1'
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
 
     # Create pytest command
     pytest_args = [
-        'pytest',
+        "pytest",
         str(test_path),
-        '-v',
-        '--tb=short',
-        '--disable-warnings',
-        '-x',  # Stop on first failure
-        '--json-report',
-        '--json-report-file=.test_report.json'
+        "-v",
+        "--tb=short",
+        "--disable-warnings",
+        "-x",  # Stop on first failure
+        "--json-report",
+        "--json-report-file=.test_report.json",
     ]
 
     # Create conftest that either enables or disables fast_litellm
@@ -83,11 +88,7 @@ def pytest_configure(config):
     start_time = time.time()
     try:
         result = subprocess.run(
-            pytest_args,
-            cwd=str(litellm_dir),
-            env=env,
-            capture_output=True,
-            text=True
+            pytest_args, cwd=str(litellm_dir), env=env, capture_output=True, text=True
         )
         exit_code = result.returncode
         stdout = result.stdout
@@ -107,7 +108,7 @@ def pytest_configure(config):
         try:
             with open(report_file) as f:
                 data = json.load(f)
-                stats = data.get('summary', {})
+                stats = data.get("summary", {})
         except:
             pass
         report_file.unlink()
@@ -121,9 +122,11 @@ def pytest_configure(config):
     print(f"\n{status}{Colors.ENDC}")
     print(f"Duration: {duration:.2f}s")
     if stats:
-        print(f"Tests: {stats.get('total', 0)} total, "
-              f"{stats.get('passed', 0)} passed, "
-              f"{stats.get('failed', 0)} failed")
+        print(
+            f"Tests: {stats.get('total', 0)} total, "
+            f"{stats.get('passed', 0)} passed, "
+            f"{stats.get('failed', 0)} failed"
+        )
 
     return exit_code, duration, stats
 
@@ -137,12 +140,17 @@ def print_comparison(baseline: Tuple, accelerated: Tuple):
 
     # Execution time comparison
     speedup = baseline_time / accel_time if accel_time > 0 else 0
-    improvement = ((baseline_time - accel_time) / baseline_time * 100) if baseline_time > 0 else 0
+    improvement = (
+        ((baseline_time - accel_time) / baseline_time * 100) if baseline_time > 0 else 0
+    )
 
     print(f"{'Metric':<30} {'Baseline':<15} {'Accelerated':<15} {'Improvement':<15}")
     print(f"{'-'*30} {'-'*15} {'-'*15} {'-'*15}")
 
-    print(f"{'Execution Time':<30} {baseline_time:>12.2f}s  {accel_time:>12.2f}s  ", end="")
+    print(
+        f"{'Execution Time':<30} {baseline_time:>12.2f}s  {accel_time:>12.2f}s  ",
+        end="",
+    )
     if speedup > 1:
         print(f"{Colors.GREEN}{speedup:>10.2f}x faster{Colors.ENDC}")
     elif speedup < 1 and speedup > 0:
@@ -151,8 +159,8 @@ def print_comparison(baseline: Tuple, accelerated: Tuple):
         print(f"{Colors.YELLOW}N/A{Colors.ENDC}")
 
     # Test results comparison
-    baseline_passed = baseline_stats.get('passed', 0)
-    accel_passed = accel_stats.get('passed', 0)
+    baseline_passed = baseline_stats.get("passed", 0)
+    accel_passed = accel_stats.get("passed", 0)
 
     print(f"{'Tests Passed':<30} {baseline_passed:>15} {accel_passed:>15}  ", end="")
     if accel_passed == baseline_passed:
@@ -173,13 +181,21 @@ def print_comparison(baseline: Tuple, accelerated: Tuple):
     print_section("Summary")
     if accel_exit == 0 and baseline_exit == 0:
         if speedup > 1:
-            print(f"{Colors.GREEN}✅ Fast LiteLLM provides {speedup:.2f}x speedup without breaking tests!{Colors.ENDC}")
+            print(
+                f"{Colors.GREEN}✅ Fast LiteLLM provides {speedup:.2f}x speedup without breaking tests!{Colors.ENDC}"
+            )
         else:
-            print(f"{Colors.YELLOW}⚠️  Tests passed but no speedup detected (might need more iterations){Colors.ENDC}")
+            print(
+                f"{Colors.YELLOW}⚠️  Tests passed but no speedup detected (might need more iterations){Colors.ENDC}"
+            )
     elif accel_exit == baseline_exit != 0:
-        print(f"{Colors.YELLOW}⚠️  Both runs failed - might be LiteLLM test issues, not acceleration{Colors.ENDC}")
+        print(
+            f"{Colors.YELLOW}⚠️  Both runs failed - might be LiteLLM test issues, not acceleration{Colors.ENDC}"
+        )
     else:
-        print(f"{Colors.RED}❌ Fast LiteLLM acceleration caused test failures!{Colors.ENDC}")
+        print(
+            f"{Colors.RED}❌ Fast LiteLLM acceleration caused test failures!{Colors.ENDC}"
+        )
 
 
 def main():
@@ -187,34 +203,36 @@ def main():
         description="Compare LiteLLM test performance with/without Fast LiteLLM"
     )
     parser.add_argument(
-        'test_path',
-        nargs='?',
-        default='tests/',
-        help='Path to LiteLLM tests to run (default: tests/)'
+        "test_path",
+        nargs="?",
+        default="tests/",
+        help="Path to LiteLLM tests to run (default: tests/)",
     )
     parser.add_argument(
-        '--litellm-dir',
+        "--litellm-dir",
         type=Path,
         default=None,
-        help='Path to LiteLLM directory (default: .litellm)'
+        help="Path to LiteLLM directory (default: .litellm)",
     )
     parser.add_argument(
-        '--skip-baseline',
-        action='store_true',
-        help='Skip baseline run (only run with acceleration)'
+        "--skip-baseline",
+        action="store_true",
+        help="Skip baseline run (only run with acceleration)",
     )
 
     args = parser.parse_args()
 
     # Check if we're in a virtual environment
-    if not subprocess.os.environ.get('VIRTUAL_ENV'):
+    if not subprocess.os.environ.get("VIRTUAL_ENV"):
         # Check if .venv exists
         script_dir = Path(__file__).parent
         project_root = script_dir.parent
         venv_dir = project_root / ".venv"
 
         if venv_dir.exists():
-            print(f"{Colors.YELLOW}⚠️  Virtual environment exists but not activated{Colors.ENDC}")
+            print(
+                f"{Colors.YELLOW}⚠️  Virtual environment exists but not activated{Colors.ENDC}"
+            )
             print(f"\nPlease activate it:")
             print(f"  source .venv/bin/activate")
             print(f"  {' '.join(subprocess.sys.argv)}")
@@ -243,13 +261,17 @@ def main():
 
     # Run baseline tests
     if not args.skip_baseline:
-        baseline = run_tests(args.test_path, with_acceleration=False, litellm_dir=litellm_dir)
+        baseline = run_tests(
+            args.test_path, with_acceleration=False, litellm_dir=litellm_dir
+        )
     else:
         print_section("Skipping baseline run")
         baseline = (0, 0, {})
 
     # Run accelerated tests
-    accelerated = run_tests(args.test_path, with_acceleration=True, litellm_dir=litellm_dir)
+    accelerated = run_tests(
+        args.test_path, with_acceleration=True, litellm_dir=litellm_dir
+    )
 
     # Compare results
     if not args.skip_baseline:
@@ -260,13 +282,15 @@ def main():
         print(f"Duration: {duration:.2f}s")
         print(f"Exit Code: {accelerated[0]}")
         if stats:
-            print(f"Tests: {stats.get('total', 0)} total, "
-                  f"{stats.get('passed', 0)} passed, "
-                  f"{stats.get('failed', 0)} failed")
+            print(
+                f"Tests: {stats.get('total', 0)} total, "
+                f"{stats.get('passed', 0)} passed, "
+                f"{stats.get('failed', 0)} failed"
+            )
 
     # Exit with appropriate code
     sys.exit(accelerated[0])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

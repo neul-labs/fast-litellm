@@ -5,30 +5,31 @@ This module provides a flexible feature flag system that allows for gradual
 rollout of Rust acceleration features with automatic degradation capabilities.
 """
 
-import os
 import json
 import logging
-from typing import Dict, Any, Optional, Set
-from dataclasses import dataclass, asdict
-from enum import Enum
+import os
 import threading
-import time
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Dict, Optional, Set
 
 logger = logging.getLogger(__name__)
 
 
 class FeatureState(Enum):
     """States for feature flags."""
+
     DISABLED = "disabled"
     ENABLED = "enabled"
-    CANARY = "canary"          # Enable for small percentage of traffic
-    SHADOW = "shadow"          # Run in shadow mode (collect metrics, don't change behavior)
+    CANARY = "canary"  # Enable for small percentage of traffic
+    SHADOW = "shadow"  # Run in shadow mode (collect metrics, don't change behavior)
     GRADUAL_ROLLOUT = "gradual_rollout"  # Gradual percentage-based rollout
 
 
 @dataclass
 class FeatureConfig:
     """Configuration for a feature flag."""
+
     name: str
     state: FeatureState
     rollout_percentage: float = 0.0  # 0-100
@@ -72,7 +73,7 @@ class FeatureFlagManager:
                 rollout_percentage=100.0,
                 fallback_on_error=True,
                 error_threshold=10,
-                performance_threshold_ms=500.0
+                performance_threshold_ms=500.0,
             ),
             "rust_token_counting": FeatureConfig(
                 name="rust_token_counting",
@@ -80,42 +81,42 @@ class FeatureFlagManager:
                 rollout_percentage=100.0,
                 fallback_on_error=True,
                 error_threshold=5,
-                performance_threshold_ms=100.0
+                performance_threshold_ms=100.0,
             ),
             "rust_rate_limiting": FeatureConfig(
                 name="rust_rate_limiting",
                 state=FeatureState.ENABLED,
                 rollout_percentage=90.0,
                 fallback_on_error=True,
-                error_threshold=3
+                error_threshold=3,
             ),
             "rust_connection_pooling": FeatureConfig(
                 name="rust_connection_pooling",
                 state=FeatureState.GRADUAL_ROLLOUT,
                 rollout_percentage=50.0,
                 fallback_on_error=True,
-                error_threshold=5
+                error_threshold=5,
             ),
             "batch_token_counting": FeatureConfig(
                 name="batch_token_counting",
                 state=FeatureState.CANARY,
                 rollout_percentage=10.0,
                 fallback_on_error=True,
-                dependencies={"rust_token_counting"}
+                dependencies={"rust_token_counting"},
             ),
             "async_routing": FeatureConfig(
                 name="async_routing",
                 state=FeatureState.SHADOW,
                 rollout_percentage=5.0,
                 fallback_on_error=True,
-                dependencies={"rust_routing"}
+                dependencies={"rust_routing"},
             ),
             "performance_monitoring": FeatureConfig(
                 name="performance_monitoring",
                 state=FeatureState.ENABLED,
                 rollout_percentage=100.0,
-                fallback_on_error=False
-            )
+                fallback_on_error=False,
+            ),
         }
 
         with self._lock:
@@ -167,22 +168,32 @@ class FeatureFlagManager:
                             self._features[feature_name].rollout_percentage = percentage
 
                 except (ValueError, IndexError):
-                    logger.warning(f"Invalid feature flag value for {env_key}: {env_value}")
+                    logger.warning(
+                        f"Invalid feature flag value for {env_key}: {env_value}"
+                    )
 
     def _load_config_file(self, config_file: str):
         """Load feature flags from a JSON configuration file."""
         try:
-            with open(config_file, 'r') as f:
+            with open(config_file, "r") as f:
                 config = json.load(f)
 
             for feature_name, feature_config in config.get("features", {}).items():
                 if feature_name in self._features:
                     with self._lock:
                         feature = self._features[feature_name]
-                        feature.state = FeatureState(feature_config.get("state", feature.state.value))
-                        feature.rollout_percentage = feature_config.get("rollout_percentage", feature.rollout_percentage)
-                        feature.error_threshold = feature_config.get("error_threshold", feature.error_threshold)
-                        feature.performance_threshold_ms = feature_config.get("performance_threshold_ms", feature.performance_threshold_ms)
+                        feature.state = FeatureState(
+                            feature_config.get("state", feature.state.value)
+                        )
+                        feature.rollout_percentage = feature_config.get(
+                            "rollout_percentage", feature.rollout_percentage
+                        )
+                        feature.error_threshold = feature_config.get(
+                            "error_threshold", feature.error_threshold
+                        )
+                        feature.performance_threshold_ms = feature_config.get(
+                            "performance_threshold_ms", feature.performance_threshold_ms
+                        )
 
         except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
             logger.warning(f"Failed to load feature config from {config_file}: {e}")
@@ -214,14 +225,25 @@ class FeatureFlagManager:
                 return False
             elif feature.state == FeatureState.ENABLED:
                 return True
-            elif feature.state in (FeatureState.CANARY, FeatureState.GRADUAL_ROLLOUT, FeatureState.SHADOW):
+            elif feature.state in (
+                FeatureState.CANARY,
+                FeatureState.GRADUAL_ROLLOUT,
+                FeatureState.SHADOW,
+            ):
                 # Use consistent rollout based on request_id or random
                 if request_id:
                     import hashlib
-                    hash_value = int(hashlib.md5(f"{feature_name}:{request_id}".encode()).hexdigest()[:8], 16)
+
+                    hash_value = int(
+                        hashlib.md5(
+                            f"{feature_name}:{request_id}".encode()
+                        ).hexdigest()[:8],
+                        16,
+                    )
                     percentage = (hash_value % 100) + 1
                 else:
                     import random
+
                     percentage = random.randint(1, 100)
 
                 return percentage <= feature.rollout_percentage
@@ -244,7 +266,9 @@ class FeatureFlagManager:
             if not feature.fallback_on_error:
                 return
 
-            self._error_counts[feature_name] = self._error_counts.get(feature_name, 0) + 1
+            self._error_counts[feature_name] = (
+                self._error_counts.get(feature_name, 0) + 1
+            )
 
             if self._error_counts[feature_name] >= feature.error_threshold:
                 logger.warning(
@@ -278,9 +302,11 @@ class FeatureFlagManager:
                 self._performance_metrics[feature_name] = duration_ms
 
             # Check if performance is too slow
-            if (duration_ms > feature.performance_threshold_ms and
-                feature.fallback_on_error and
-                feature.state != FeatureState.DISABLED):
+            if (
+                duration_ms > feature.performance_threshold_ms
+                and feature.fallback_on_error
+                and feature.state != FeatureState.DISABLED
+            ):
 
                 logger.warning(
                     f"Disabling feature '{feature_name}' due to poor performance: "
@@ -298,18 +324,19 @@ class FeatureFlagManager:
                         "rollout_percentage": feature.rollout_percentage,
                         "error_count": self._error_counts.get(name, 0),
                         "avg_performance_ms": self._performance_metrics.get(name, 0.0),
-                        "dependencies": list(feature.dependencies)
+                        "dependencies": list(feature.dependencies),
                     }
                     for name, feature in self._features.items()
                 },
                 "global_status": {
                     "total_features": len(self._features),
                     "enabled_features": sum(
-                        1 for f in self._features.values()
+                        1
+                        for f in self._features.values()
                         if f.state != FeatureState.DISABLED
                     ),
-                    "error_count": sum(self._error_counts.values())
-                }
+                    "error_count": sum(self._error_counts.values()),
+                },
             }
 
     def reset_errors(self, feature_name: Optional[str] = None):

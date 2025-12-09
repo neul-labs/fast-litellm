@@ -1,8 +1,8 @@
+use dashmap::DashMap;
 /// Rate limiting functionality
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
-use dashmap::DashMap;
 
 #[derive(Debug, Clone)]
 pub struct RateLimitConfig {
@@ -52,15 +52,14 @@ impl TokenBucket {
         let current_tokens = self.tokens.load(Ordering::Relaxed);
         if current_tokens >= tokens {
             let new_tokens = current_tokens - tokens;
-            match self.tokens.compare_exchange_weak(
-                current_tokens,
-                new_tokens,
-                Ordering::Relaxed,
-                Ordering::Relaxed,
-            ) {
-                Ok(_) => true,
-                Err(_) => false, // Someone else consumed tokens, try again later
-            }
+            self.tokens
+                .compare_exchange_weak(
+                    current_tokens,
+                    new_tokens,
+                    Ordering::Relaxed,
+                    Ordering::Relaxed,
+                )
+                .is_ok()
         } else {
             false
         }
@@ -75,18 +74,23 @@ impl TokenBucket {
         let last_refill = self.last_refill.load(Ordering::Relaxed);
         let time_passed = now - last_refill;
 
-        if time_passed >= 1000 { // At least 1 second has passed
+        if time_passed >= 1000 {
+            // At least 1 second has passed
             let tokens_to_add = (time_passed / 1000) * self.refill_rate;
 
             let current_tokens = self.tokens.load(Ordering::Relaxed);
             let new_tokens = std::cmp::min(current_tokens + tokens_to_add, self.capacity);
 
-            if self.tokens.compare_exchange_weak(
-                current_tokens,
-                new_tokens,
-                Ordering::Relaxed,
-                Ordering::Relaxed,
-            ).is_ok() {
+            if self
+                .tokens
+                .compare_exchange_weak(
+                    current_tokens,
+                    new_tokens,
+                    Ordering::Relaxed,
+                    Ordering::Relaxed,
+                )
+                .is_ok()
+            {
                 self.last_refill.store(now, Ordering::Relaxed);
             }
         }
@@ -126,7 +130,8 @@ impl SlidingWindowCounter {
         let current_count = self.get_current_count(current_window);
 
         if current_count < self.limit {
-            let window_counter = self.windows
+            let window_counter = self
+                .windows
                 .entry(current_window)
                 .or_insert_with(|| AtomicU64::new(0));
             window_counter.fetch_add(1, Ordering::Relaxed);
@@ -174,6 +179,12 @@ pub struct RateLimiter {
     minute_counters: DashMap<String, SlidingWindowCounter>,
     hour_counters: DashMap<String, SlidingWindowCounter>,
     configs: DashMap<String, RateLimitConfig>,
+}
+
+impl Default for RateLimiter {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RateLimiter {
@@ -251,22 +262,28 @@ impl RateLimiter {
     }
 
     pub fn get_remaining_requests(&self, key: &str) -> u64 {
-        let bucket_remaining = self.token_buckets
+        let bucket_remaining = self
+            .token_buckets
             .get(key)
             .map(|b| b.available_tokens())
             .unwrap_or(0);
 
-        let minute_remaining = self.minute_counters
+        let minute_remaining = self
+            .minute_counters
             .get(key)
             .map(|c| c.get_remaining())
             .unwrap_or(0);
 
-        let hour_remaining = self.hour_counters
+        let hour_remaining = self
+            .hour_counters
             .get(key)
             .map(|c| c.get_remaining())
             .unwrap_or(0);
 
-        std::cmp::min(std::cmp::min(bucket_remaining, minute_remaining), hour_remaining)
+        std::cmp::min(
+            std::cmp::min(bucket_remaining, minute_remaining),
+            hour_remaining,
+        )
     }
 
     pub fn get_stats(&self) -> HashMap<String, serde_json::Value> {

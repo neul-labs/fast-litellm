@@ -146,7 +146,7 @@ jobs:
         shell: bash
         run: |
           pip install pytest pytest-asyncio
-          pytest tests/ -v --ignore=tests/benchmark_* -x
+          pytest tests/ -v --ignore=tests/benchmark_* -x -p no:cov
 
   test-release:
     name: Test PyPI Release

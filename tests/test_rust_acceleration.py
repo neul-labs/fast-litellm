@@ -7,9 +7,10 @@ These tests verify that:
 3. Rust code paths are actually executed
 """
 
-import pytest
-import sys
 import os
+import sys
+
+import pytest
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -23,25 +24,26 @@ class TestRustAccelerationAvailable:
 
     def test_rust_module_available(self):
         """Verify Rust module is loaded"""
-        assert fast_litellm.RUST_ACCELERATION_AVAILABLE, \
-            "Rust acceleration should be available after build"
+        assert (
+            fast_litellm.RUST_ACCELERATION_AVAILABLE
+        ), "Rust acceleration should be available after build"
 
     def test_rust_functions_exported(self):
         """Verify Rust functions are exported"""
         import fast_litellm._rust as rust
 
         # Check that key functions exist
-        assert hasattr(rust, 'apply_acceleration')
-        assert hasattr(rust, 'health_check')
-        assert hasattr(rust, 'get_performance_stats')
-        assert hasattr(rust, 'is_enabled')
+        assert hasattr(rust, "apply_acceleration")
+        assert hasattr(rust, "health_check")
+        assert hasattr(rust, "get_performance_stats")
+        assert hasattr(rust, "is_enabled")
 
     def test_health_check(self):
         """Test Rust health check function"""
         result = fast_litellm.health_check()
 
         assert isinstance(result, dict), "Health check should return a dict"
-        assert 'status' in result or 'rust_available' in result
+        assert "status" in result or "rust_available" in result
         print(f"Health check result: {result}")
 
     def test_acceleration_applied(self):
@@ -59,7 +61,7 @@ class TestRustFunctions:
     def test_feature_flags_enabled(self):
         """Test Rust feature flag checking"""
         # Even if feature is disabled, the function should work
-        result = fast_litellm.is_enabled('rust_routing')
+        result = fast_litellm.is_enabled("rust_routing")
         assert isinstance(result, bool), "is_enabled should return boolean"
         print(f"Rust routing enabled: {result}")
 
@@ -84,8 +86,9 @@ class TestRustWithLiteLLM:
         # This should work without errors if acceleration is properly applied
         try:
             import litellm
+
             assert litellm is not None
-            print(f"✓ LiteLLM imported successfully with acceleration")
+            print("✓ LiteLLM imported successfully with acceleration")
         except Exception as e:
             pytest.fail(f"Failed to import LiteLLM with acceleration: {e}")
 
@@ -96,9 +99,10 @@ class TestRustWithLiteLLM:
         # Basic utility that should still work
         try:
             from litellm import get_model_info
+
             info = get_model_info("gpt-3.5-turbo")
             assert info is not None
-            assert 'max_tokens' in info or 'max_input_tokens' in info
+            assert "max_tokens" in info or "max_input_tokens" in info
             print(f"✓ Model info works: {list(info.keys())[:5]}")
         except Exception as e:
             pytest.fail(f"Model info failed with acceleration: {e}")

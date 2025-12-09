@@ -5,6 +5,12 @@ pub struct TokenCounter {
     // In a real implementation, this would hold tiktoken encoding instances
 }
 
+impl Default for TokenCounter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TokenCounter {
     pub fn new() -> Self {
         Self {}
@@ -19,10 +25,15 @@ impl TokenCounter {
         Ok(text.chars().count() / 4)
     }
 
-    pub fn count_tokens_batch(&self, texts: &[String], model: Option<&str>) -> Result<Vec<usize>, String> {
+    pub fn count_tokens_batch(
+        &self,
+        texts: &[String],
+        model: Option<&str>,
+    ) -> Result<Vec<usize>, String> {
         let model = model.unwrap_or("gpt-3.5-turbo");
 
-        texts.iter()
+        texts
+            .iter()
             .map(|text| self.count_tokens(text, Some(model)))
             .collect()
     }
@@ -62,10 +73,14 @@ impl TokenCounter {
             _ => (4096, 4096),
         };
 
-        limits.insert("context_window".to_string(),
-            serde_json::Value::Number(serde_json::Number::from(context_window)));
-        limits.insert("max_output_tokens".to_string(),
-            serde_json::Value::Number(serde_json::Number::from(max_output)));
+        limits.insert(
+            "context_window".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(context_window)),
+        );
+        limits.insert(
+            "max_output_tokens".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(max_output)),
+        );
 
         limits
     }
@@ -100,7 +115,11 @@ pub fn count_tokens_batch(texts: &[String], model: Option<&str>) -> Result<Vec<u
     TOKEN_COUNTER.count_tokens_batch(texts, model)
 }
 
-pub fn estimate_cost(input_tokens: usize, output_tokens: usize, model: &str) -> Result<f64, String> {
+pub fn estimate_cost(
+    input_tokens: usize,
+    output_tokens: usize,
+    model: &str,
+) -> Result<f64, String> {
     TOKEN_COUNTER.estimate_cost(input_tokens, output_tokens, model)
 }
 

@@ -1,15 +1,18 @@
+//! High-performance Rust acceleration for LiteLLM
+//!
+//! This module provides Rust-accelerated implementations of core LiteLLM
+//! functionality including routing, token counting, rate limiting, and
+//! connection pooling.
+
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use std::collections::HashMap;
 
-/// High-performance Rust acceleration for LiteLLM
-///
-/// This module provides Rust-accelerated implementations of core LiteLLM
-/// functionality including routing, token counting, rate limiting, and
-/// connection pooling.
-
-/// Helper function to convert HashMap<String, serde_json::Value> to PyDict
-fn convert_hashmap_to_pydict(py: Python, map: HashMap<String, serde_json::Value>) -> PyResult<PyObject> {
+// Helper function to convert HashMap<String, serde_json::Value> to PyDict
+fn convert_hashmap_to_pydict(
+    py: Python,
+    map: HashMap<String, serde_json::Value>,
+) -> PyResult<PyObject> {
     let dict = PyDict::new(py);
 
     for (key, value) in map {
@@ -20,7 +23,8 @@ fn convert_hashmap_to_pydict(py: Python, map: HashMap<String, serde_json::Value>
     Ok(dict.into())
 }
 
-/// Helper function to convert serde_json::Value to Python object
+// Helper function to convert serde_json::Value to Python object
+#[allow(deprecated)]
 fn convert_json_value_to_py(py: Python, value: serde_json::Value) -> PyResult<PyObject> {
     match value {
         serde_json::Value::Null => Ok(py.None()),
@@ -33,7 +37,7 @@ fn convert_json_value_to_py(py: Python, value: serde_json::Value) -> PyResult<Py
             } else {
                 Ok(py.None())
             }
-        },
+        }
         serde_json::Value::String(s) => Ok(s.into_py(py)),
         serde_json::Value::Array(arr) => {
             let py_list = PyList::empty(py);
@@ -42,7 +46,7 @@ fn convert_json_value_to_py(py: Python, value: serde_json::Value) -> PyResult<Py
                 py_list.append(py_item)?;
             }
             Ok(py_list.into())
-        },
+        }
         serde_json::Value::Object(obj) => {
             let dict = PyDict::new(py);
             for (key, value) in obj {
@@ -54,12 +58,12 @@ fn convert_json_value_to_py(py: Python, value: serde_json::Value) -> PyResult<Py
     }
 }
 
-pub mod core;
-pub mod tokens;
 pub mod connection_pool;
-pub mod rate_limiter;
+pub mod core;
 pub mod feature_flags;
 pub mod performance_monitor;
+pub mod rate_limiter;
+pub mod tokens;
 
 /// Check if Rust acceleration is available
 #[pyfunction]
@@ -87,7 +91,7 @@ fn health_check(py: Python) -> PyResult<PyObject> {
     dict.set_item("status", "ok")?;
     dict.set_item("rust_available", true)?;
 
-    let components = PyList::new(py, &["core", "tokens", "connection_pool", "rate_limiter"])?;
+    let components = PyList::new(py, ["core", "tokens", "connection_pool", "rate_limiter"])?;
     dict.set_item("components", components)?;
 
     Ok(dict.into())
@@ -151,7 +155,8 @@ fn compare_implementations(
     rust_component: String,
     python_component: String,
 ) -> PyResult<PyObject> {
-    let comparison = performance_monitor::compare_implementations(&rust_component, &python_component);
+    let comparison =
+        performance_monitor::compare_implementations(&rust_component, &python_component);
     convert_hashmap_to_pydict(py, comparison)
 }
 
@@ -176,10 +181,7 @@ fn get_recommendations(py: Python) -> PyResult<PyObject> {
 /// Export performance data
 #[pyfunction]
 #[pyo3(signature = (component=None, format=None))]
-fn export_performance_data(
-    component: Option<String>,
-    format: Option<String>,
-) -> String {
+fn export_performance_data(component: Option<String>, format: Option<String>) -> String {
     performance_monitor::export_performance_data(
         component.as_deref(),
         format.as_deref().unwrap_or("json"),
@@ -192,7 +194,15 @@ fn get_patch_status(py: Python) -> PyResult<PyObject> {
     let dict = PyDict::new(py);
     dict.set_item("applied", true)?;
 
-    let components = PyList::new(py, &["routing", "token_counting", "rate_limiting", "connection_pooling"])?;
+    let components = PyList::new(
+        py,
+        [
+            "routing",
+            "token_counting",
+            "rate_limiting",
+            "connection_pooling",
+        ],
+    )?;
     dict.set_item("components", components)?;
 
     Ok(dict.into())

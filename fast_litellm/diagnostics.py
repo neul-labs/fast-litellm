@@ -1,7 +1,8 @@
 """
 Health check and diagnostics for Fast LiteLLM Rust acceleration.
 """
-from typing import Dict, Any
+
+from typing import Any, Dict
 
 
 def health_check() -> Dict[str, Any]:
@@ -13,14 +14,12 @@ def health_check() -> Dict[str, Any]:
     """
     try:
         from fast_litellm import _rust
+
         rust_available = True
     except ImportError:
         rust_available = False
 
-    results = {
-        "rust_acceleration_available": rust_available,
-        "components": {}
-    }
+    results = {"rust_acceleration_available": rust_available, "components": {}}
 
     if not rust_available:
         results["error"] = "Rust acceleration is not available"
@@ -37,7 +36,10 @@ def health_check() -> Dict[str, Any]:
             results["components"]["rust"] = {"error": str(e)}
             results["overall_healthy"] = False
     else:
-        results["components"]["rust"] = {"status": "available", "health_check": "not_implemented"}
+        results["components"]["rust"] = {
+            "status": "available",
+            "health_check": "not_implemented",
+        }
         results["overall_healthy"] = True
 
     return results
@@ -52,14 +54,12 @@ def get_performance_stats() -> Dict[str, Any]:
     """
     try:
         from fast_litellm import _rust
+
         rust_available = True
     except ImportError:
         rust_available = False
 
-    stats = {
-        "rust_acceleration_available": rust_available,
-        "components": {}
-    }
+    stats = {"rust_acceleration_available": rust_available, "components": {}}
 
     if not rust_available:
         stats["error"] = "Rust acceleration is not available"
@@ -72,7 +72,9 @@ def get_performance_stats() -> Dict[str, Any]:
         except Exception as e:
             stats["components"]["rust"] = {"error": str(e)}
     else:
-        stats["components"]["rust"] = {"message": "Performance stats not yet implemented"}
+        stats["components"]["rust"] = {
+            "message": "Performance stats not yet implemented"
+        }
 
     return stats
 
@@ -86,12 +88,14 @@ def get_version_info() -> Dict[str, Any]:
     """
     try:
         import fast_litellm
+
         version = fast_litellm.__version__
-    except:
+    except Exception:
         version = "unknown"
 
     try:
         from fast_litellm import _rust
+
         rust_version = getattr(_rust, "__version__", "0.1.0")
         rust_available = True
     except ImportError:

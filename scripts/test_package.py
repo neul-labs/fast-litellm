@@ -3,11 +3,11 @@
 Test script for fast-litellm package build and installation
 """
 
+import os
 import subprocess
 import sys
 import tempfile
 import venv
-import os
 from pathlib import Path
 
 
@@ -16,11 +16,7 @@ def run_command(cmd, cwd=None, check=True):
     print(f"Running: {' '.join(cmd)}")
     try:
         result = subprocess.run(
-            cmd,
-            cwd=cwd,
-            check=check,
-            capture_output=True,
-            text=True
+            cmd, cwd=cwd, check=check, capture_output=True, text=True
         )
         if result.stdout:
             print(f"STDOUT:\n{result.stdout}")
@@ -105,7 +101,9 @@ def test_package_installation(wheel_path):
 
         # Install dependencies first
         print("Installing dependencies...")
-        run_command([str(pip_exe), "install", "pydantic", "tiktoken", "aiohttp", "httpx"])
+        run_command(
+            [str(pip_exe), "install", "pydantic", "tiktoken", "aiohttp", "httpx"]
+        )
 
         # Install our wheel
         print(f"Installing wheel: {wheel_path}")
@@ -113,7 +111,7 @@ def test_package_installation(wheel_path):
 
         # Test importing the package
         print("Testing package import...")
-        test_script = '''
+        test_script = """
 import sys
 try:
     import fast_litellm
@@ -135,7 +133,7 @@ except Exception as e:
     import traceback
     traceback.print_exc()
     sys.exit(1)
-'''
+"""
 
         result = run_command([str(python_exe), "-c", test_script])
         if result.returncode == 0:
@@ -170,6 +168,7 @@ def main():
     except Exception as e:
         print(f"\n❌ Test failed with error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

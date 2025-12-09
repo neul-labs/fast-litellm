@@ -1,8 +1,8 @@
+use dashmap::DashMap;
+use serde::{Deserialize, Serialize};
 /// Feature flag management system
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
-use dashmap::DashMap;
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum FeatureState {
@@ -88,6 +88,12 @@ pub struct FeatureFlagManager {
     flags: DashMap<String, FeatureFlag>,
 }
 
+impl Default for FeatureFlagManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FeatureFlagManager {
     pub fn new() -> Self {
         let manager = Self {
@@ -95,9 +101,15 @@ impl FeatureFlagManager {
         };
 
         // Initialize default feature flags
-        manager.add_flag("rust_routing".to_string(), FeatureState::GradualRollout { percentage: 10 });
+        manager.add_flag(
+            "rust_routing".to_string(),
+            FeatureState::GradualRollout { percentage: 10 },
+        );
         manager.add_flag("rust_token_counting".to_string(), FeatureState::Enabled);
-        manager.add_flag("rust_rate_limiting".to_string(), FeatureState::GradualRollout { percentage: 25 });
+        manager.add_flag(
+            "rust_rate_limiting".to_string(),
+            FeatureState::GradualRollout { percentage: 25 },
+        );
         manager.add_flag("rust_connection_pool".to_string(), FeatureState::Canary);
 
         manager
@@ -143,30 +155,39 @@ impl FeatureFlagManager {
             let flag = entry.value();
 
             let mut flag_status = HashMap::new();
-            flag_status.insert("state".to_string(), match &flag.state {
-                FeatureState::Disabled => serde_json::Value::String("disabled".to_string()),
-                FeatureState::Enabled => serde_json::Value::String("enabled".to_string()),
-                FeatureState::Canary => serde_json::Value::String("canary".to_string()),
-                FeatureState::GradualRollout { percentage } => serde_json::json!({
-                    "type": "gradual_rollout",
-                    "percentage": percentage
-                }),
-                FeatureState::Shadow => serde_json::Value::String("shadow".to_string()),
-            });
-
-            flag_status.insert("enabled".to_string(),
-                serde_json::Value::Bool(flag.enabled.load(Ordering::Relaxed))
-            );
-            flag_status.insert("error_count".to_string(),
-                serde_json::Value::Number(serde_json::Number::from(flag.error_count.load(Ordering::Relaxed)))
-            );
-            flag_status.insert("error_threshold".to_string(),
-                serde_json::Value::Number(serde_json::Number::from(flag.error_threshold))
+            flag_status.insert(
+                "state".to_string(),
+                match &flag.state {
+                    FeatureState::Disabled => serde_json::Value::String("disabled".to_string()),
+                    FeatureState::Enabled => serde_json::Value::String("enabled".to_string()),
+                    FeatureState::Canary => serde_json::Value::String("canary".to_string()),
+                    FeatureState::GradualRollout { percentage } => serde_json::json!({
+                        "type": "gradual_rollout",
+                        "percentage": percentage
+                    }),
+                    FeatureState::Shadow => serde_json::Value::String("shadow".to_string()),
+                },
             );
 
-            result.insert(name.clone(), serde_json::Value::Object(
-                flag_status.into_iter().collect()
-            ));
+            flag_status.insert(
+                "enabled".to_string(),
+                serde_json::Value::Bool(flag.enabled.load(Ordering::Relaxed)),
+            );
+            flag_status.insert(
+                "error_count".to_string(),
+                serde_json::Value::Number(serde_json::Number::from(
+                    flag.error_count.load(Ordering::Relaxed),
+                )),
+            );
+            flag_status.insert(
+                "error_threshold".to_string(),
+                serde_json::Value::Number(serde_json::Number::from(flag.error_threshold)),
+            );
+
+            result.insert(
+                name.clone(),
+                serde_json::Value::Object(flag_status.into_iter().collect()),
+            );
         }
 
         result

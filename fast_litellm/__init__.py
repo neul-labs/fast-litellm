@@ -39,16 +39,15 @@ except ImportError as e:
         "Falling back to Python implementations. "
         "Install from source with 'pip install fast-litellm --no-binary :all:' for full acceleration.",
         ImportWarning,
-        stacklevel=2
+        stacklevel=2,
     )
     RUST_ACCELERATION_AVAILABLE = False
 
 # Import enhanced systems (fallback to Python-only if Rust not available)
 if not RUST_ACCELERATION_AVAILABLE:
-    from . import enhanced_monkeypatch
+    from . import diagnostics, enhanced_monkeypatch
     from . import feature_flags as py_feature_flags
     from . import performance_monitor as py_performance_monitor
-    from . import diagnostics
 
     # Use Python implementations as fallbacks
     apply_acceleration = enhanced_monkeypatch.enhanced_apply_acceleration
@@ -90,5 +89,5 @@ if RUST_ACCELERATION_AVAILABLE:
         warnings.warn(
             f"Fast LiteLLM: Failed to apply acceleration: {e}",
             RuntimeWarning,
-            stacklevel=2
+            stacklevel=2,
         )

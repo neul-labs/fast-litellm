@@ -50,9 +50,9 @@ jobs:
     - name: Build package
       run: uv run maturin develop
 
-    - name: Run tests
+    - name: Run tests with coverage
       run: |
-        uv run pytest tests/ -v --cov=fast_litellm --cov-report=xml
+        uv run pytest tests/ -v --cov=fast_litellm --cov-report=xml --cov-report=term-missing
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
@@ -88,13 +88,13 @@ jobs:
         uv add --dev black isort flake8 mypy
 
     - name: Check Python formatting
-      run: uv run black --check .
+      run: uv run black --check fast_litellm/ tests/ scripts/ examples/
 
     - name: Check Python imports
-      run: uv run isort --check-only .
+      run: uv run isort --check-only fast_litellm/ tests/ scripts/ examples/
 
     - name: Lint Python
-      run: uv run flake8 .
+      run: uv run flake8 fast_litellm/ tests/
 
     - name: Type check Python
       run: uv run mypy fast_litellm/

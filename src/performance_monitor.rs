@@ -1,8 +1,8 @@
+use dashmap::DashMap;
 /// Performance monitoring and metrics collection
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
-use dashmap::DashMap;
 
 #[derive(Debug, Clone)]
 pub struct PerformanceMetric {
@@ -26,6 +26,12 @@ pub struct ComponentStats {
     pub max_duration_ms: AtomicU64,
 }
 
+impl Default for ComponentStats {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ComponentStats {
     pub fn new() -> Self {
         Self {
@@ -42,7 +48,8 @@ impl ComponentStats {
         let duration_int = (duration_ms * 1000.0) as u64; // Store as microseconds for precision
 
         self.total_calls.fetch_add(1, Ordering::Relaxed);
-        self.total_duration_ms.fetch_add(duration_int, Ordering::Relaxed);
+        self.total_duration_ms
+            .fetch_add(duration_int, Ordering::Relaxed);
 
         if success {
             self.success_count.fetch_add(1, Ordering::Relaxed);
@@ -115,6 +122,12 @@ pub struct PerformanceMonitor {
     component_stats: DashMap<String, ComponentStats>,
 }
 
+impl Default for PerformanceMonitor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PerformanceMonitor {
     pub fn new() -> Self {
         Self {
@@ -127,13 +140,14 @@ impl PerformanceMonitor {
         let key = format!("{}:{}", metric.component, metric.operation);
 
         // Update component stats
-        let stats = self.component_stats
+        let stats = self
+            .component_stats
             .entry(metric.component.clone())
-            .or_insert_with(ComponentStats::new);
+            .or_default();
         stats.update(metric.duration_ms, metric.success);
 
         // Store detailed metric (limit to last 1000 entries per key)
-        let mut metrics = self.metrics.entry(key).or_insert_with(Vec::new);
+        let mut metrics = self.metrics.entry(key).or_default();
         metrics.push(metric);
         if metrics.len() > 1000 {
             metrics.remove(0);
@@ -171,22 +185,32 @@ impl PerformanceMonitor {
             let python_json = python_stats.to_json();
 
             if let (Some(rust_avg), Some(python_avg)) = (
-                rust_json.get("average_duration_ms").and_then(|v| v.as_f64()),
-                python_json.get("average_duration_ms").and_then(|v| v.as_f64()),
+                rust_json
+                    .get("average_duration_ms")
+                    .and_then(|v| v.as_f64()),
+                python_json
+                    .get("average_duration_ms")
+                    .and_then(|v| v.as_f64()),
             ) {
-                let speedup = if rust_avg > 0.0 { python_avg / rust_avg } else { 0.0 };
+                let speedup = if rust_avg > 0.0 {
+                    python_avg / rust_avg
+                } else {
+                    0.0
+                };
 
                 comparison.insert("rust".to_string(), rust_json);
                 comparison.insert("python".to_string(), python_json);
-                comparison.insert("speedup".to_string(),
+                comparison.insert(
+                    "speedup".to_string(),
                     serde_json::Number::from_f64(speedup)
                         .map(serde_json::Value::Number)
-                        .unwrap_or_else(|| serde_json::Value::Number(serde_json::Number::from(0)))
+                        .unwrap_or_else(|| serde_json::Value::Number(serde_json::Number::from(0))),
                 );
-                comparison.insert("improvement_percentage".to_string(),
+                comparison.insert(
+                    "improvement_percentage".to_string(),
                     serde_json::Number::from_f64((speedup - 1.0) * 100.0)
                         .map(serde_json::Value::Number)
-                        .unwrap_or_else(|| serde_json::Value::Number(serde_json::Number::from(0)))
+                        .unwrap_or_else(|| serde_json::Value::Number(serde_json::Number::from(0))),
                 );
             }
         }
@@ -204,7 +228,9 @@ impl PerformanceMonitor {
             let total_calls = stats.total_calls.load(Ordering::Relaxed);
             let error_count = stats.error_count.load(Ordering::Relaxed);
             let avg_duration = if total_calls > 0 {
-                (stats.total_duration_ms.load(Ordering::Relaxed) as f64) / (total_calls as f64) / 1000.0
+                (stats.total_duration_ms.load(Ordering::Relaxed) as f64)
+                    / (total_calls as f64)
+                    / 1000.0
             } else {
                 0.0
             };
@@ -212,13 +238,26 @@ impl PerformanceMonitor {
             // High error rate recommendation
             if total_calls > 100 && error_count as f64 / total_calls as f64 > 0.05 {
                 let mut rec = HashMap::new();
-                rec.insert("type".to_string(), serde_json::Value::String("high_error_rate".to_string()));
-                rec.insert("component".to_string(), serde_json::Value::String(component.clone()));
-                rec.insert("description".to_string(), serde_json::Value::String(
-                    format!("Component {} has high error rate: {:.1}%",
-                        component, (error_count as f64 / total_calls as f64) * 100.0)
-                ));
-                rec.insert("priority".to_string(), serde_json::Value::String("high".to_string()));
+                rec.insert(
+                    "type".to_string(),
+                    serde_json::Value::String("high_error_rate".to_string()),
+                );
+                rec.insert(
+                    "component".to_string(),
+                    serde_json::Value::String(component.clone()),
+                );
+                rec.insert(
+                    "description".to_string(),
+                    serde_json::Value::String(format!(
+                        "Component {} has high error rate: {:.1}%",
+                        component,
+                        (error_count as f64 / total_calls as f64) * 100.0
+                    )),
+                );
+                rec.insert(
+                    "priority".to_string(),
+                    serde_json::Value::String("high".to_string()),
+                );
                 rec.insert("suggestion".to_string(), serde_json::Value::String(
                     "Consider investigating error causes or implementing circuit breaker pattern".to_string()
                 ));
@@ -226,32 +265,66 @@ impl PerformanceMonitor {
             }
 
             // Slow performance recommendation
-            if avg_duration > 1000.0 { // > 1 second average
+            if avg_duration > 1000.0 {
+                // > 1 second average
                 let mut rec = HashMap::new();
-                rec.insert("type".to_string(), serde_json::Value::String("slow_performance".to_string()));
-                rec.insert("component".to_string(), serde_json::Value::String(component.clone()));
-                rec.insert("description".to_string(), serde_json::Value::String(
-                    format!("Component {} has slow average response time: {:.1}ms", component, avg_duration)
-                ));
-                rec.insert("priority".to_string(), serde_json::Value::String("medium".to_string()));
-                rec.insert("suggestion".to_string(), serde_json::Value::String(
-                    "Consider optimizing algorithms or increasing concurrency".to_string()
-                ));
+                rec.insert(
+                    "type".to_string(),
+                    serde_json::Value::String("slow_performance".to_string()),
+                );
+                rec.insert(
+                    "component".to_string(),
+                    serde_json::Value::String(component.clone()),
+                );
+                rec.insert(
+                    "description".to_string(),
+                    serde_json::Value::String(format!(
+                        "Component {} has slow average response time: {:.1}ms",
+                        component, avg_duration
+                    )),
+                );
+                rec.insert(
+                    "priority".to_string(),
+                    serde_json::Value::String("medium".to_string()),
+                );
+                rec.insert(
+                    "suggestion".to_string(),
+                    serde_json::Value::String(
+                        "Consider optimizing algorithms or increasing concurrency".to_string(),
+                    ),
+                );
                 recommendations.push(rec);
             }
 
             // Low usage recommendation
             if total_calls < 10 {
                 let mut rec = HashMap::new();
-                rec.insert("type".to_string(), serde_json::Value::String("low_usage".to_string()));
-                rec.insert("component".to_string(), serde_json::Value::String(component.clone()));
-                rec.insert("description".to_string(), serde_json::Value::String(
-                    format!("Component {} has very low usage: {} calls", component, total_calls)
-                ));
-                rec.insert("priority".to_string(), serde_json::Value::String("low".to_string()));
-                rec.insert("suggestion".to_string(), serde_json::Value::String(
-                    "Consider if this component is needed or increase feature flag percentage".to_string()
-                ));
+                rec.insert(
+                    "type".to_string(),
+                    serde_json::Value::String("low_usage".to_string()),
+                );
+                rec.insert(
+                    "component".to_string(),
+                    serde_json::Value::String(component.clone()),
+                );
+                rec.insert(
+                    "description".to_string(),
+                    serde_json::Value::String(format!(
+                        "Component {} has very low usage: {} calls",
+                        component, total_calls
+                    )),
+                );
+                rec.insert(
+                    "priority".to_string(),
+                    serde_json::Value::String("low".to_string()),
+                );
+                rec.insert(
+                    "suggestion".to_string(),
+                    serde_json::Value::String(
+                        "Consider if this component is needed or increase feature flag percentage"
+                            .to_string(),
+                    ),
+                );
                 recommendations.push(rec);
             }
         }
@@ -265,15 +338,21 @@ impl PerformanceMonitor {
         match format {
             "json" => serde_json::to_string_pretty(&stats).unwrap_or_default(),
             "csv" => {
-                let mut csv = String::from("component,total_calls,average_duration_ms,success_rate,error_count\n");
+                let mut csv = String::from(
+                    "component,total_calls,average_duration_ms,success_rate,error_count\n",
+                );
                 for (comp, data) in stats {
                     if let serde_json::Value::Object(obj) = data {
                         csv.push_str(&format!(
                             "{},{},{},{},{}\n",
                             comp,
                             obj.get("total_calls").and_then(|v| v.as_u64()).unwrap_or(0),
-                            obj.get("average_duration_ms").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                            obj.get("success_rate").and_then(|v| v.as_f64()).unwrap_or(0.0),
+                            obj.get("average_duration_ms")
+                                .and_then(|v| v.as_f64())
+                                .unwrap_or(0.0),
+                            obj.get("success_rate")
+                                .and_then(|v| v.as_f64())
+                                .unwrap_or(0.0),
                             obj.get("error_count").and_then(|v| v.as_u64()).unwrap_or(0)
                         ));
                     }

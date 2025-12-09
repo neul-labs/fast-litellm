@@ -1,7 +1,7 @@
-/// Core routing and load balancing functionality
-use std::collections::HashMap;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
+/// Core routing and load balancing functionality
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RouteConfig {
@@ -21,6 +21,12 @@ struct RouteMetrics {
     success_rate: f64,
     cost_per_request: f64,
     active_requests: u32,
+}
+
+impl Default for AdvancedRouter {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl AdvancedRouter {
@@ -108,14 +114,15 @@ impl AdvancedRouter {
     }
 
     pub fn update_metrics(&self, endpoint: &str, latency: f64, success: bool, cost: f64) {
-        let mut metrics = self.metrics.entry(endpoint.to_string()).or_insert_with(|| {
-            RouteMetrics {
-                latency_ms: latency,
-                success_rate: if success { 1.0 } else { 0.0 },
-                cost_per_request: cost,
-                active_requests: 0,
-            }
-        });
+        let mut metrics =
+            self.metrics
+                .entry(endpoint.to_string())
+                .or_insert_with(|| RouteMetrics {
+                    latency_ms: latency,
+                    success_rate: if success { 1.0 } else { 0.0 },
+                    cost_per_request: cost,
+                    active_requests: 0,
+                });
 
         // Simple exponential moving average
         metrics.latency_ms = 0.9 * metrics.latency_ms + 0.1 * latency;
@@ -145,28 +152,33 @@ impl AdvancedRouter {
             let metrics = entry.value();
 
             let mut endpoint_metrics = HashMap::new();
-            endpoint_metrics.insert("latency_ms".to_string(),
+            endpoint_metrics.insert(
+                "latency_ms".to_string(),
                 serde_json::Number::from_f64(metrics.latency_ms)
                     .map(serde_json::Value::Number)
-                    .unwrap_or_else(|| serde_json::Value::Number(serde_json::Number::from(0)))
+                    .unwrap_or_else(|| serde_json::Value::Number(serde_json::Number::from(0))),
             );
-            endpoint_metrics.insert("success_rate".to_string(),
+            endpoint_metrics.insert(
+                "success_rate".to_string(),
                 serde_json::Number::from_f64(metrics.success_rate)
                     .map(serde_json::Value::Number)
-                    .unwrap_or_else(|| serde_json::Value::Number(serde_json::Number::from(0)))
+                    .unwrap_or_else(|| serde_json::Value::Number(serde_json::Number::from(0))),
             );
-            endpoint_metrics.insert("cost_per_request".to_string(),
+            endpoint_metrics.insert(
+                "cost_per_request".to_string(),
                 serde_json::Number::from_f64(metrics.cost_per_request)
                     .map(serde_json::Value::Number)
-                    .unwrap_or_else(|| serde_json::Value::Number(serde_json::Number::from(0)))
+                    .unwrap_or_else(|| serde_json::Value::Number(serde_json::Number::from(0))),
             );
-            endpoint_metrics.insert("active_requests".to_string(),
-                serde_json::Value::Number(serde_json::Number::from(metrics.active_requests))
+            endpoint_metrics.insert(
+                "active_requests".to_string(),
+                serde_json::Value::Number(serde_json::Number::from(metrics.active_requests)),
             );
 
-            result.insert(endpoint.clone(), serde_json::Value::Object(
-                endpoint_metrics.into_iter().collect()
-            ));
+            result.insert(
+                endpoint.clone(),
+                serde_json::Value::Object(endpoint_metrics.into_iter().collect()),
+            );
         }
 
         result

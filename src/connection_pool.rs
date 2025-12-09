@@ -1,8 +1,8 @@
+use dashmap::DashMap;
 /// Connection pooling functionality
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
-use dashmap::DashMap;
 
 #[derive(Debug, Clone)]
 pub struct Connection {
@@ -69,6 +69,12 @@ pub struct ConnectionPool {
     max_idle_time_ms: u64,
 }
 
+impl Default for ConnectionPool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ConnectionPool {
     pub fn new() -> Self {
         Self {
@@ -113,9 +119,7 @@ impl ConnectionPool {
             let endpoint = connection.endpoint.clone();
 
             // Return to available pool
-            let mut available = self.available_connections
-                .entry(endpoint)
-                .or_insert_with(Vec::new);
+            let mut available = self.available_connections.entry(endpoint).or_default();
             available.push(connection_id.to_string());
 
             self.active_connections.fetch_sub(1, Ordering::Relaxed);
@@ -145,12 +149,14 @@ impl ConnectionPool {
     }
 
     pub fn cleanup_expired_connections(&self) {
-        let expired_connections: Vec<String> = self.connections
+        let expired_connections: Vec<String> = self
+            .connections
             .iter()
             .filter_map(|entry| {
                 let connection = entry.value();
-                if connection.is_expired(self.connection_timeout_ms) ||
-                   connection.is_idle(self.max_idle_time_ms) {
+                if connection.is_expired(self.connection_timeout_ms)
+                    || connection.is_idle(self.max_idle_time_ms)
+                {
                     Some(entry.key().clone())
                 } else {
                     None
@@ -166,18 +172,21 @@ impl ConnectionPool {
     pub fn get_stats(&self) -> HashMap<String, serde_json::Value> {
         let mut stats = HashMap::new();
 
-        stats.insert("active_connections".to_string(),
+        stats.insert(
+            "active_connections".to_string(),
             serde_json::Value::Number(serde_json::Number::from(
-                self.active_connections.load(Ordering::Relaxed)
-            ))
+                self.active_connections.load(Ordering::Relaxed),
+            )),
         );
-        stats.insert("total_connections".to_string(),
+        stats.insert(
+            "total_connections".to_string(),
             serde_json::Value::Number(serde_json::Number::from(
-                self.total_connections.load(Ordering::Relaxed)
-            ))
+                self.total_connections.load(Ordering::Relaxed),
+            )),
         );
-        stats.insert("max_total_connections".to_string(),
-            serde_json::Value::Number(serde_json::Number::from(self.max_total_connections))
+        stats.insert(
+            "max_total_connections".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(self.max_total_connections)),
         );
 
         // Per-endpoint stats
@@ -186,14 +195,18 @@ impl ConnectionPool {
             let endpoint = entry.key();
             let available_count = entry.value().len();
 
-            endpoint_stats.insert(endpoint.clone(), serde_json::json!({
-                "available_connections": available_count,
-                "max_connections": self.max_connections_per_endpoint
-            }));
+            endpoint_stats.insert(
+                endpoint.clone(),
+                serde_json::json!({
+                    "available_connections": available_count,
+                    "max_connections": self.max_connections_per_endpoint
+                }),
+            );
         }
 
-        stats.insert("endpoints".to_string(),
-            serde_json::Value::Object(endpoint_stats.into_iter().collect())
+        stats.insert(
+            "endpoints".to_string(),
+            serde_json::Value::Object(endpoint_stats.into_iter().collect()),
         );
 
         stats
@@ -205,7 +218,8 @@ impl ConnectionPool {
             return false;
         }
 
-        let endpoint_count = self.available_connections
+        let endpoint_count = self
+            .available_connections
             .get(endpoint)
             .map(|v| v.len())
             .unwrap_or(0) as u32;
@@ -214,7 +228,8 @@ impl ConnectionPool {
     }
 
     fn create_connection(&self, endpoint: &str) -> String {
-        let connection_id = format!("conn_{}_{}",
+        let connection_id = format!(
+            "conn_{}_{}",
             endpoint.replace("://", "_").replace("/", "_"),
             self.total_connections.load(Ordering::Relaxed)
         );

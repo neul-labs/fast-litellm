@@ -9,9 +9,10 @@ This example shows how to:
 4. Monitor performance
 """
 
+import litellm
+
 # IMPORTANT: Import fast_litellm FIRST to enable acceleration
 import fast_litellm
-import litellm
 
 
 def main():
@@ -33,7 +34,7 @@ def main():
     # Get health status
     health = fast_litellm.health_check()
     print(f"✓ Status: {health.get('status', 'unknown')}")
-    if 'components' in health:
+    if "components" in health:
         print(f"✓ Components: {', '.join(health['components'])}")
     print()
 
@@ -43,7 +44,7 @@ def main():
 
     features = fast_litellm.get_feature_status()
     for feature_name, feature_status in features.items():
-        enabled = feature_status.get('enabled', False)
+        enabled = feature_status.get("enabled", False)
         status_symbol = "✓" if enabled else "○"
         print(f"{status_symbol} {feature_name}: {'enabled' if enabled else 'disabled'}")
     print()

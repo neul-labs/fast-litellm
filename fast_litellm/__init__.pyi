@@ -1,6 +1,6 @@
 # Type stubs for fast_litellm
 
-from typing import Dict, List, Optional, Any, Union
+from typing import Any, Dict, List, Optional, Union
 
 # Constants
 RUST_ACCELERATION_AVAILABLE: bool
@@ -26,17 +26,12 @@ def record_performance(
     output_size: Optional[int] = None,
     metadata: Optional[Dict[str, Any]] = None,
 ) -> None: ...
-
 def get_performance_stats(component: Optional[str] = None) -> Dict[str, Any]: ...
-
 def compare_implementations(
     rust_component: str, python_component: str
 ) -> Dict[str, Any]: ...
-
 def get_recommendations() -> List[Dict[str, Any]]: ...
-
 def export_performance_data(
     component: Optional[str] = None, format: str = "json"
 ) -> str: ...
-
 def get_patch_status() -> Dict[str, Any]: ...

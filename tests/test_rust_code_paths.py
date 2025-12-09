@@ -5,17 +5,18 @@ These tests verify that when LiteLLM functions are called,
 the Rust implementations are used instead of Python.
 """
 
-import pytest
-import sys
 import os
+import sys
+
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# CRITICAL: Import fast_litellm FIRST to enable Rust acceleration
-import fast_litellm
-
 # Now import LiteLLM - it should use Rust where enabled
 import litellm
+
+# CRITICAL: Import fast_litellm FIRST to enable Rust acceleration
+import fast_litellm
 
 
 class TestRustTokenCounting:
@@ -24,12 +25,13 @@ class TestRustTokenCounting:
     def test_token_counter_import(self):
         """Verify token counter can be imported"""
         from litellm import token_counter
+
         assert token_counter is not None
 
     def test_encode_tokens(self):
         """Test token encoding (should use Rust if enabled)"""
         try:
-            from litellm import encode, decode
+            from litellm import decode, encode
 
             # Simple token counting test
             text = "Hello, world! This is a test."
@@ -42,7 +44,7 @@ class TestRustTokenCounting:
             # Test decoding
             decoded = decode(model="gpt-3.5-turbo", tokens=tokens)
             assert decoded == text, "Decoded text should match original"
-            print(f"✓ Decoded tokens correctly")
+            print("✓ Decoded tokens correctly")
 
         except Exception as e:
             # Token counting might not be fully implemented yet
@@ -78,7 +80,7 @@ class TestRustModelInfo:
         info = get_model_info("gpt-3.5-turbo")
 
         assert isinstance(info, dict), "Model info should be a dict"
-        assert 'max_tokens' in info or 'max_input_tokens' in info
+        assert "max_tokens" in info or "max_input_tokens" in info
         print(f"✓ Got model info with {len(info)} fields")
 
     def test_get_model_cost(self):
@@ -86,14 +88,18 @@ class TestRustModelInfo:
         from litellm import cost_per_token
 
         # These should use Rust-accelerated lookups
-        result = cost_per_token(model="gpt-3.5-turbo", prompt_tokens=100, completion_tokens=50)
+        result = cost_per_token(
+            model="gpt-3.5-turbo", prompt_tokens=100, completion_tokens=50
+        )
 
         # cost_per_token returns a tuple (prompt_cost, completion_cost)
         if isinstance(result, tuple):
             input_cost, output_cost = result
             assert isinstance(input_cost, (int, float))
             assert isinstance(output_cost, (int, float))
-            print(f"✓ Cost calculation works: input=${input_cost}, output=${output_cost}")
+            print(
+                f"✓ Cost calculation works: input=${input_cost}, output=${output_cost}"
+            )
         else:
             assert isinstance(result, (int, float))
             print(f"✓ Cost calculation works: ${result}")
@@ -119,11 +125,12 @@ class TestPerformanceMonitoring:
 
         # Do some operations
         from litellm import token_counter
+
         try:
             for _ in range(5):
                 token_counter(
                     model="gpt-3.5-turbo",
-                    messages=[{"role": "user", "content": "test"}]
+                    messages=[{"role": "user", "content": "test"}],
                 )
         except Exception as e:
             print(f"Token counting: {e}")
@@ -150,7 +157,12 @@ class TestFeatureFlags:
 
     def test_check_enabled_features(self):
         """Check which Rust features are enabled"""
-        features = ['rust_routing', 'rust_token_counting', 'rust_rate_limiting', 'rust_connection_pool']
+        features = [
+            "rust_routing",
+            "rust_token_counting",
+            "rust_rate_limiting",
+            "rust_connection_pool",
+        ]
 
         for feature in features:
             enabled = fast_litellm.is_enabled(feature)
@@ -162,12 +174,12 @@ class TestFeatureFlags:
         status = fast_litellm.get_feature_status()
 
         assert isinstance(status, dict)
-        assert 'rust_token_counting' in status
+        assert "rust_token_counting" in status
 
         # Check token counting status (should be enabled based on earlier output)
-        tc_status = status['rust_token_counting']
-        assert 'enabled' in tc_status
-        assert 'error_count' in tc_status
+        tc_status = status["rust_token_counting"]
+        assert "enabled" in tc_status
+        assert "error_count" in tc_status
 
         print(f"Token counting status: {tc_status}")
 
@@ -181,8 +193,8 @@ class TestLiteLLMCompatibility:
             completion,
             embedding,
             image_generation,
-            transcription,
             speech,
+            transcription,
         )
 
         # All should be importable
@@ -193,8 +205,8 @@ class TestLiteLLMCompatibility:
     def test_litellm_utils_work(self):
         """Test utility functions"""
         from litellm import (
-            get_supported_openai_params,
             get_optional_params,
+            get_supported_openai_params,
         )
 
         # Test with a model
@@ -204,7 +216,7 @@ class TestLiteLLMCompatibility:
 
     def test_model_list_functions(self):
         """Test model listing functions"""
-        from litellm import model_list, get_model_info
+        from litellm import get_model_info, model_list
 
         # These should work with Rust acceleration
         models = model_list

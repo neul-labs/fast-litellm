@@ -5,13 +5,13 @@ This module provides an advanced monkeypatching system that integrates with
 the feature flag system for safe, gradual rollout of Rust acceleration.
 """
 
-import importlib
-import sys
-import time
-import logging
+import asyncio
 import functools
-from typing import Any, Dict, Optional, Callable
+import importlib
+import logging
+import time
 from contextlib import contextmanager
+from typing import Any, Callable, Dict
 
 from .feature_flags import is_enabled, record_error, record_performance
 
@@ -34,7 +34,9 @@ class PerformanceWrapper:
 
     def __call__(self, *args, **kwargs):
         """Execute with performance monitoring and fallback."""
-        request_id = kwargs.get('request_id') or getattr(args[0] if args else None, 'request_id', None)
+        request_id = kwargs.get("request_id") or getattr(
+            args[0] if args else None, "request_id", None
+        )
 
         if not is_enabled(self.feature_name, request_id):
             # Feature disabled, use original implementation
@@ -54,12 +56,16 @@ class PerformanceWrapper:
         except Exception as e:
             # Record error and fallback to original
             record_error(self.feature_name, e)
-            logger.warning(f"Rust implementation failed for {self.feature_name}, falling back to Python: {e}")
+            logger.warning(
+                f"Rust implementation failed for {self.feature_name}, falling back to Python: {e}"
+            )
 
             try:
                 return self.original_func(*args, **kwargs)
             except Exception as fallback_error:
-                logger.error(f"Both Rust and Python implementations failed for {self.feature_name}: {fallback_error}")
+                logger.error(
+                    f"Both Rust and Python implementations failed for {self.feature_name}: {fallback_error}"
+                )
                 raise
 
     def __get__(self, instance, owner):
@@ -80,7 +86,9 @@ class AsyncPerformanceWrapper:
 
     async def __call__(self, *args, **kwargs):
         """Execute async with performance monitoring and fallback."""
-        request_id = kwargs.get('request_id') or getattr(args[0] if args else None, 'request_id', None)
+        request_id = kwargs.get("request_id") or getattr(
+            args[0] if args else None, "request_id", None
+        )
 
         if not is_enabled(self.feature_name, request_id):
             # Feature disabled, use original implementation
@@ -106,7 +114,9 @@ class AsyncPerformanceWrapper:
         except Exception as e:
             # Record error and fallback to original
             record_error(self.feature_name, e)
-            logger.warning(f"Rust implementation failed for {self.feature_name}, falling back to Python: {e}")
+            logger.warning(
+                f"Rust implementation failed for {self.feature_name}, falling back to Python: {e}"
+            )
 
             try:
                 if asyncio.iscoroutinefunction(self.original_func):
@@ -114,11 +124,15 @@ class AsyncPerformanceWrapper:
                 else:
                     return self.original_func(*args, **kwargs)
             except Exception as fallback_error:
-                logger.error(f"Both Rust and Python implementations failed for {self.feature_name}: {fallback_error}")
+                logger.error(
+                    f"Both Rust and Python implementations failed for {self.feature_name}: {fallback_error}"
+                )
                 raise
 
 
-def enhanced_patch_function(module_name: str, function_name: str, rust_function: Any, feature_name: str) -> bool:
+def enhanced_patch_function(
+    module_name: str, function_name: str, rust_function: Any, feature_name: str
+) -> bool:
     """
     Enhanced function patching with feature flags and performance monitoring.
 
@@ -145,14 +159,23 @@ def enhanced_patch_function(module_name: str, function_name: str, rust_function:
 
             # Create wrapper based on whether it's async
             import asyncio
-            if asyncio.iscoroutinefunction(original_function) or asyncio.iscoroutinefunction(rust_function):
-                wrapper = AsyncPerformanceWrapper(original_function, rust_function, feature_name)
+
+            if asyncio.iscoroutinefunction(
+                original_function
+            ) or asyncio.iscoroutinefunction(rust_function):
+                wrapper = AsyncPerformanceWrapper(
+                    original_function, rust_function, feature_name
+                )
             else:
-                wrapper = PerformanceWrapper(original_function, rust_function, feature_name)
+                wrapper = PerformanceWrapper(
+                    original_function, rust_function, feature_name
+                )
 
             # Replace with wrapper
             setattr(module, function_name, wrapper)
-            logger.info(f"Successfully patched {module_name}.{function_name} with feature flag {feature_name}")
+            logger.info(
+                f"Successfully patched {module_name}.{function_name} with feature flag {feature_name}"
+            )
             return True
         else:
             logger.warning(f"Function {module_name}.{function_name} not found")
@@ -163,7 +186,9 @@ def enhanced_patch_function(module_name: str, function_name: str, rust_function:
         return False
 
 
-def enhanced_patch_class(module_name: str, class_name: str, rust_class: Any, feature_name: str) -> bool:
+def enhanced_patch_class(
+    module_name: str, class_name: str, rust_class: Any, feature_name: str
+) -> bool:
     """
     Enhanced class patching with feature flags and monitoring.
 
@@ -191,7 +216,7 @@ def enhanced_patch_class(module_name: str, class_name: str, rust_class: Any, fea
             # Create a hybrid class that checks feature flags
             class HybridClass:
                 def __new__(cls, *args, **kwargs):
-                    request_id = kwargs.get('request_id')
+                    request_id = kwargs.get("request_id")
 
                     if is_enabled(feature_name, request_id):
                         try:
@@ -202,22 +227,31 @@ def enhanced_patch_class(module_name: str, class_name: str, rust_class: Any, fea
                             return instance
                         except Exception as e:
                             record_error(feature_name, e)
-                            logger.warning(f"Rust class instantiation failed for {feature_name}, falling back: {e}")
+                            logger.warning(
+                                f"Rust class instantiation failed for {feature_name}, falling back: {e}"
+                            )
 
                     # Fallback to original class
                     return original_class(*args, **kwargs)
 
             # Copy attributes from original class
             for attr_name in dir(original_class):
-                if not attr_name.startswith('__') or attr_name in ('__doc__', '__module__'):
+                if not attr_name.startswith("__") or attr_name in (
+                    "__doc__",
+                    "__module__",
+                ):
                     try:
-                        setattr(HybridClass, attr_name, getattr(original_class, attr_name))
+                        setattr(
+                            HybridClass, attr_name, getattr(original_class, attr_name)
+                        )
                     except (AttributeError, TypeError):
                         pass
 
             # Replace with hybrid class
             setattr(module, class_name, HybridClass)
-            logger.info(f"Successfully patched {module_name}.{class_name} with feature flag {feature_name}")
+            logger.info(
+                f"Successfully patched {module_name}.{class_name} with feature flag {feature_name}"
+            )
             return True
         else:
             logger.warning(f"Class {module_name}.{class_name} not found")
@@ -238,9 +272,13 @@ def enhanced_apply_acceleration(rust_extensions_module) -> bool:
     Returns:
         bool: True if acceleration was applied successfully, False otherwise
     """
-    if not hasattr(rust_extensions_module, 'RUST_ACCELERATION_AVAILABLE') or \
-       not rust_extensions_module.RUST_ACCELERATION_AVAILABLE:
-        logger.info("Rust acceleration is not available. Falling back to Python implementations.")
+    if (
+        not hasattr(rust_extensions_module, "RUST_ACCELERATION_AVAILABLE")
+        or not rust_extensions_module.RUST_ACCELERATION_AVAILABLE
+    ):
+        logger.info(
+            "Rust acceleration is not available. Falling back to Python implementations."
+        )
         return False
 
     logger.info("Applying enhanced Rust acceleration with feature flags...")
@@ -262,26 +300,43 @@ def enhanced_apply_acceleration(rust_extensions_module) -> bool:
     # Patch routing components with feature flag
     if hasattr(fast_litellm, "AdvancedRouter"):
         total_patches += 1
-        if enhanced_patch_class("litellm.router", "Router", fast_litellm.AdvancedRouter, "rust_routing"):
+        if enhanced_patch_class(
+            "litellm.router", "Router", fast_litellm.AdvancedRouter, "rust_routing"
+        ):
             success_count += 1
 
     # Patch token counting with feature flag
     if hasattr(_rust, "SimpleTokenCounter"):
         total_patches += 1
         # Patch the token counting function in the utils module
-        if enhanced_patch_function("litellm.utils", "token_counter", _rust.SimpleTokenCounter, "rust_token_counting"):
+        if enhanced_patch_function(
+            "litellm.utils",
+            "token_counter",
+            _rust.SimpleTokenCounter,
+            "rust_token_counting",
+        ):
             success_count += 1
 
     # Patch rate limiting
     if hasattr(_rust, "SimpleRateLimiter"):
         total_patches += 1
-        if enhanced_patch_class("litellm", "SimpleRateLimiter", _rust.SimpleRateLimiter, "rust_rate_limiting"):
+        if enhanced_patch_class(
+            "litellm",
+            "SimpleRateLimiter",
+            _rust.SimpleRateLimiter,
+            "rust_rate_limiting",
+        ):
             success_count += 1
 
     # Patch connection pooling
     if hasattr(_rust, "SimpleConnectionPool"):
         total_patches += 1
-        if enhanced_patch_class("litellm", "SimpleConnectionPool", _rust.SimpleConnectionPool, "rust_connection_pooling"):
+        if enhanced_patch_class(
+            "litellm",
+            "SimpleConnectionPool",
+            _rust.SimpleConnectionPool,
+            "rust_connection_pooling",
+        ):
             success_count += 1
 
     # Add new batch processing function if available
@@ -289,10 +344,17 @@ def enhanced_apply_acceleration(rust_extensions_module) -> bool:
         counter = _rust.SimpleTokenCounter(100)
         if hasattr(counter, "count_tokens_batch"):
             total_patches += 1
-            if enhanced_patch_function("litellm.utils", "count_tokens_batch", counter.count_tokens_batch, "batch_token_counting"):
+            if enhanced_patch_function(
+                "litellm.utils",
+                "count_tokens_batch",
+                counter.count_tokens_batch,
+                "batch_token_counting",
+            ):
                 success_count += 1
 
-    logger.info(f"Applied {success_count}/{total_patches} enhanced Rust acceleration patches successfully.")
+    logger.info(
+        f"Applied {success_count}/{total_patches} enhanced Rust acceleration patches successfully."
+    )
     return success_count > 0
 
 
@@ -300,7 +362,9 @@ def remove_enhanced_acceleration() -> None:
     """
     Remove enhanced Rust acceleration and restore original Python implementations.
     """
-    logger.info("Removing enhanced Rust acceleration and restoring original implementations...")
+    logger.info(
+        "Removing enhanced Rust acceleration and restoring original implementations..."
+    )
 
     for patch_key, original_impl in _original_implementations.items():
         try:
@@ -329,12 +393,12 @@ def get_patch_status() -> Dict[str, Any]:
                 "feature_flag": feature_name,
                 "enabled": is_enabled(feature_name),
                 "has_original": patch_key in _original_implementations,
-                "has_rust": patch_key in _rust_implementations
+                "has_rust": patch_key in _rust_implementations,
             }
             for patch_key, feature_name in _patched_functions.items()
         },
         "feature_flags": feature_status,
-        "total_patches": len(_patched_functions)
+        "total_patches": len(_patched_functions),
     }
 
 
@@ -353,7 +417,9 @@ def temporary_disable_feature(feature_name: str):
         with _feature_manager._lock:
             if feature_name in _feature_manager._features:
                 original_state = _feature_manager._features[feature_name].state
-                _feature_manager._features[feature_name].state = _feature_manager.FeatureState.DISABLED
+                _feature_manager._features[feature_name].state = (
+                    _feature_manager.FeatureState.DISABLED
+                )
 
         yield
 
