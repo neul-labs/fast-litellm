@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   build-linux:
@@ -116,6 +117,7 @@ jobs:
     needs: [build-linux, build-windows, build-macos, build-sdist]
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
+    environment: test-release
 
     steps:
       - name: Download all artifacts
@@ -125,19 +127,16 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Publish to Test PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Install twine
-        run: pip install twine
-
-      - name: Publish to Test PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
-        run: twine upload --repository testpypi --skip-existing dist/*
 
       - name: Test installation from Test PyPI
         run: |
@@ -159,19 +158,12 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install twine
-        run: pip install twine
-
       - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: twine upload --skip-existing dist/*
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+
+      - uses: actions/checkout@v4
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
