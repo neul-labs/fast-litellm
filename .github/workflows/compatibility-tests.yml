@@ -15,6 +15,10 @@ on:
         required: false
         default: 'main'
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   compatibility-matrix:
     name: Python ${{ matrix.python-version }} / ${{ matrix.os }}
