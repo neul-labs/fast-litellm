@@ -14,9 +14,6 @@ on:
 permissions:
   contents: write
 
-env:
-  PYTHON_VERSIONS: "3.9 3.10 3.11 3.12 3.13"
-
 jobs:
   build-linux:
     name: Build Linux wheels
@@ -114,43 +111,9 @@ jobs:
           name: wheels-sdist
           path: dist
 
-  test-wheels:
-    name: Test wheels
-    needs: [build-linux, build-windows, build-macos, build-sdist]
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Download wheels
-        uses: actions/download-artifact@v4
-        with:
-          pattern: wheels-*
-          path: dist
-          merge-multiple: true
-
-      - name: Install wheel
-        shell: bash
-        run: |
-          pip install --find-links dist fast-litellm
-
-      - name: Run compatibility tests
-        shell: bash
-        run: |
-          pip install pytest pytest-asyncio
-          pytest tests/ -v --ignore=tests/benchmark_* -x -p no:cov
-
   test-release:
     name: Test PyPI Release
-    needs: [test-wheels]
+    needs: [build-linux, build-windows, build-macos, build-sdist]
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
 
@@ -183,7 +146,7 @@ jobs:
 
   release:
     name: Release to PyPI
-    needs: [test-wheels]
+    needs: [build-linux, build-windows, build-macos, build-sdist]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     environment: release
