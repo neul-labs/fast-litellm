@@ -5,19 +5,19 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python Versions](https://img.shields.io/pypi/pyversions/fast-litellm.svg)](https://pypi.org/project/fast-litellm/)
 
-High-performance Rust acceleration for [LiteLLM](https://github.com/BerriAI/litellm) - targeting 2-20x performance improvements for token counting, routing, rate limiting, and connection management.
+High-performance Rust acceleration for [LiteLLM](https://github.com/BerriAI/litellm) - providing significant performance improvements for connection pooling, rate limiting, and memory-intensive workloads.
 
 ## Why Fast LiteLLM?
 
 Fast LiteLLM is a drop-in Rust acceleration layer for LiteLLM that provides targeted performance improvements where it matters most:
 
-- **Modest improvements** in already well-optimized operations like token counting
-- **~46% faster** rate limiting with async and concurrent primitives
-- **~39% faster** connection management with improved pooling
-- **Enhanced batch processing** capabilities
-- **Lock-free data structures** for concurrent operations
+- **3.2x faster** connection pooling with DashMap lock-free data structures
+- **1.6x faster** rate limiting with atomic operations
+- **1.5-1.7x faster** token counting for large texts
+- **42x more memory efficient** for high-cardinality rate limiting (1000+ unique keys)
+- **Lock-free concurrent access** using DashMap for thread-safe operations
 
-Built with PyO3 and Rust, it seamlessly integrates with existing LiteLLM code with zero configuration required. Performance gains are most significant in complex operations where Rust's concurrency model provides advantages over Python's.
+Built with PyO3 and Rust, it seamlessly integrates with existing LiteLLM code with zero configuration required. Performance gains are most significant in connection pooling, rate limiting, and memory-intensive workloads.
 
 ## Installation
 
@@ -77,15 +77,36 @@ The acceleration uses PyO3 to create Python extensions from Rust code:
 
 ## Performance Benchmarks
 
-| Component | Baseline | Optimized | Use Case |
-|-----------|----------|-----------|----------|
-| Token Counting | Well-optimized | **~0x** | Individual token counting (LiteLLM already optimized) |
-| Batch Token Counting | Python implementation | **+9%** | Processing multiple texts at once |
-| Request Routing | Python implementation | **+0.7%** | Load balancing, model selection |
-| Rate Limiting | Python implementation | **+46%** | Request throttling, quota management |
-| Connection Pooling | Python implementation | **+39%** | HTTP reuse, latency reduction |
+Benchmarks comparing production-grade Python implementations (with thread-safety) vs Rust:
 
-**Note:** Our benchmarking revealed that LiteLLM's core token counting is already well-optimized, so performance gains are most significant in complex operations like rate limiting and connection pooling, where Rust's concurrent primitives provide meaningful improvements.
+| Component | Speedup | Memory | Best For |
+|-----------|---------|--------|----------|
+| **Connection Pool** | **3.2x faster** | Same | HTTP connection management |
+| **Rate Limiting** | **1.6x faster** | Same | Request throttling, quota management |
+| **Large Text Tokenization** | **1.5-1.7x faster** | Same | Processing long documents |
+| **High-Cardinality Rate Limits** | **1.2x faster** | **42x less memory** | Many unique API keys/users |
+| Concurrent Connection Pool | **1.2x faster** | Same | Multi-threaded workloads |
+| Small Text Tokenization | 0.5x (Python faster) | Same | Short messages (FFI overhead) |
+| Routing | 0.4x (Python faster) | Same | Model selection (FFI overhead) |
+
+### Key Insights
+
+✅ **Use Rust acceleration for:**
+- Connection pooling (3x+ speedup)
+- Rate limiting (1.5x+ speedup)
+- Large text token counting (1.5x+ speedup)
+- High-cardinality workloads (40x+ memory savings)
+
+⚠️ **Python may be faster for:**
+- Small text token counting (FFI overhead dominates)
+- Routing with complex Python objects
+
+Run benchmarks yourself:
+```bash
+python scripts/run_benchmarks.py --iterations 200
+```
+
+See [BENCHMARK.md](BENCHMARK.md) for detailed results.
 
 ## Configuration
 

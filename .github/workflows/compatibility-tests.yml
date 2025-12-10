@@ -255,7 +255,7 @@ jobs:
 
           # Write report
           report_content = "\n".join(report)
-          with open("COMPATIBILITY_REPORT.md", "w") as f:
+          with open("COMPATIBILITY.md", "w") as f:
               f.write(report_content)
 
           print(report_content)
@@ -265,7 +265,16 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: compatibility-report
-          path: COMPATIBILITY_REPORT.md
+          path: COMPATIBILITY.md
+
+      - name: Commit COMPATIBILITY.md
+        if: github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add COMPATIBILITY.md
+          git diff --staged --quiet || git commit -m "Update COMPATIBILITY.md [skip ci]"
+          git push
 
       - name: Post report to PR
         if: github.event_name == 'pull_request'
@@ -273,7 +282,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const report = fs.readFileSync('COMPATIBILITY_REPORT.md', 'utf8');
+            const report = fs.readFileSync('COMPATIBILITY.md', 'utf8');
 
             // Find existing comment
             const { data: comments } = await github.rest.issues.listComments({

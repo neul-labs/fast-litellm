@@ -307,12 +307,54 @@ def enhanced_apply_acceleration(rust_extensions_module) -> bool:
 
     # Patch token counting with feature flag
     if hasattr(_rust, "SimpleTokenCounter"):
+        # Create a counter instance
+        counter = _rust.SimpleTokenCounter(4096)
+
+        # Create wrapper function that adapts LiteLLM's signature to our Rust function
+        def rust_token_counter(model=None, messages=None, text=None, **kwargs):
+            """Rust-accelerated token counter that matches LiteLLM's signature."""
+            if text is not None:
+                # Direct text provided
+                return counter.count_tokens(text, model)
+
+            if messages is not None:
+                # Extract text from messages
+                total_tokens = 0
+                for msg in messages:
+                    if isinstance(msg, dict):
+                        content = msg.get("content", "")
+                        if isinstance(content, str):
+                            total_tokens += counter.count_tokens(content, model)
+                        elif isinstance(content, list):
+                            # Handle content lists (for multimodal)
+                            for part in content:
+                                if (
+                                    isinstance(part, dict)
+                                    and part.get("type") == "text"
+                                ):
+                                    total_tokens += counter.count_tokens(
+                                        part.get("text", ""), model
+                                    )
+                return total_tokens
+
+            return 0
+
+        # Patch both litellm.utils.token_counter AND litellm.token_counter
         total_patches += 1
-        # Patch the token counting function in the utils module
         if enhanced_patch_function(
             "litellm.utils",
             "token_counter",
-            _rust.SimpleTokenCounter,
+            rust_token_counter,
+            "rust_token_counting",
+        ):
+            success_count += 1
+
+        # Also patch the top-level litellm.token_counter
+        total_patches += 1
+        if enhanced_patch_function(
+            "litellm",
+            "token_counter",
+            rust_token_counter,
             "rust_token_counting",
         ):
             success_count += 1

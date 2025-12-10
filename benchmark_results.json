@@ -1,0 +1,493 @@
+{
+  "timestamp": "2025-12-10 00:37:11 UTC",
+  "system_info": {
+    "platform": "Linux",
+    "platform_version": "#36~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Wed Oct 15 15:45:17 UTC 2",
+    "architecture": "x86_64",
+    "python_version": "3.12.3",
+    "processor": "x86_64",
+    "memory_tracking": true,
+    "total_memory_gb": 62.15,
+    "fast_litellm_version": "0.1.0",
+    "rust_available": true,
+    "litellm_version": "1.80.0"
+  },
+  "results": {
+    "Token Counting": [
+      {
+        "name": "Python Token Counting",
+        "function": "token_counter",
+        "iterations": 200,
+        "total_time": 0.32701519993133843,
+        "avg_time": 0.0016350759996566922,
+        "min_time": 0.0014524590224027634,
+        "max_time": 0.00208291900344193,
+        "std_dev": 9.381966044687441e-05,
+        "throughput": 611.5923664771328,
+        "config": {
+          "implementation": "python"
+        },
+        "memory": null
+      },
+      {
+        "name": "Rust Token Counting",
+        "function": "token_counter",
+        "iterations": 200,
+        "total_time": 0.4840991656528786,
+        "avg_time": 0.0024204958282643928,
+        "min_time": 0.0021831259364262223,
+        "max_time": 0.0027144920313730836,
+        "std_dev": 0.00010882015362827951,
+        "throughput": 413.1384934949655,
+        "config": {
+          "implementation": "rust",
+          "rust_available": true
+        },
+        "memory": {
+          "peak_memory_mb": 0.05,
+          "current_memory_mb": 201.41,
+          "memory_diff_mb": 0.05
+        }
+      },
+      {
+        "name": "Shimmed Token Counting",
+        "function": "token_counter",
+        "iterations": 200,
+        "total_time": 0.6197988556232303,
+        "avg_time": 0.0030989942781161515,
+        "min_time": 0.0025004009949043393,
+        "max_time": 0.00488347199279815,
+        "std_dev": 0.00048567511868834125,
+        "throughput": 322.6853328067099,
+        "config": {
+          "implementation": "shimmed",
+          "rust_available": true
+        },
+        "memory": {
+          "peak_memory_mb": 0.06,
+          "current_memory_mb": 201.45,
+          "memory_diff_mb": 0.04
+        }
+      }
+    ],
+    "Rate Limiting": [
+      {
+        "name": "Python Rate Limiter",
+        "function": "check_rate_limit",
+        "iterations": 200,
+        "total_time": 0.3769423287594691,
+        "avg_time": 0.0018847116437973454,
+        "min_time": 0.0016430849209427834,
+        "max_time": 0.0026325880317017436,
+        "std_dev": 0.0001593442324544564,
+        "throughput": 530.585144571604,
+        "config": {
+          "implementation": "python",
+          "num_keys": 50
+        },
+        "memory": {
+          "peak_memory_mb": 0.12,
+          "current_memory_mb": 201.73,
+          "memory_diff_mb": 0.28
+        }
+      },
+      {
+        "name": "Rust Rate Limiter",
+        "function": "check_rate_limit",
+        "iterations": 200,
+        "total_time": 0.24382112477906048,
+        "avg_time": 0.0012191056238953024,
+        "min_time": 0.0010674879886209965,
+        "max_time": 0.0016737430123612285,
+        "std_dev": 0.00010484647936735589,
+        "throughput": 820.2734696644142,
+        "config": {
+          "implementation": "rust",
+          "rust_available": true,
+          "num_keys": 50
+        },
+        "memory": {
+          "peak_memory_mb": 0.05,
+          "current_memory_mb": 202.64,
+          "memory_diff_mb": 0.91
+        }
+      }
+    ],
+    "Connection Pool": [
+      {
+        "name": "Python Connection Pool",
+        "function": "connection_pool",
+        "iterations": 200,
+        "total_time": 0.027159794117324054,
+        "avg_time": 0.00013579897058662026,
+        "min_time": 0.00012876105029135942,
+        "max_time": 0.00029073399491608143,
+        "std_dev": 1.5623794722663423e-05,
+        "throughput": 7363.826070847447,
+        "config": {
+          "implementation": "python",
+          "num_endpoints": 10
+        },
+        "memory": {
+          "peak_memory_mb": 0.05,
+          "current_memory_mb": 202.66,
+          "memory_diff_mb": 0.02
+        }
+      },
+      {
+        "name": "Rust Connection Pool",
+        "function": "connection_pool",
+        "iterations": 200,
+        "total_time": 0.008428319590166211,
+        "avg_time": 4.2141597950831056e-05,
+        "min_time": 3.9834994822740555e-05,
+        "max_time": 7.319694850593805e-05,
+        "std_dev": 4.679267687350335e-06,
+        "throughput": 23729.52257687892,
+        "config": {
+          "implementation": "rust",
+          "rust_available": true,
+          "num_endpoints": 10
+        },
+        "memory": {
+          "peak_memory_mb": 0.05,
+          "current_memory_mb": 202.68,
+          "memory_diff_mb": 0.02
+        }
+      }
+    ],
+    "Routing": [
+      {
+        "name": "Python Routing",
+        "function": "get_available_deployment",
+        "iterations": 200,
+        "total_time": 0.15112377831246704,
+        "avg_time": 0.0007556188915623352,
+        "min_time": 0.0005678030429407954,
+        "max_time": 0.0009956039721146226,
+        "std_dev": 6.0845291981492875e-05,
+        "throughput": 1323.4184734746066,
+        "config": {
+          "implementation": "python"
+        },
+        "memory": {
+          "peak_memory_mb": 0.05,
+          "current_memory_mb": 202.69,
+          "memory_diff_mb": 0.01
+        }
+      },
+      {
+        "name": "Rust Routing",
+        "function": "get_available_deployment",
+        "iterations": 200,
+        "total_time": 0.3463524815160781,
+        "avg_time": 0.0017317624075803906,
+        "min_time": 0.0015903780004009604,
+        "max_time": 0.0027090610237792134,
+        "std_dev": 0.00010837159816672169,
+        "throughput": 577.4464185287374,
+        "config": {
+          "implementation": "rust",
+          "rust_available": true
+        },
+        "memory": {
+          "peak_memory_mb": 0.05,
+          "current_memory_mb": 202.7,
+          "memory_diff_mb": 0.0
+        }
+      }
+    ],
+    "Concurrent Rate Limiting": [
+      {
+        "name": "Python Rate Limiter (8 threads)",
+        "function": "check_rate_limit_concurrent",
+        "iterations": 200,
+        "total_time": 0.010891649057157338,
+        "avg_time": 5.445824528578669e-05,
+        "min_time": 0.0007754620164632797,
+        "max_time": 0.0018512760289013386,
+        "std_dev": 0.000391082785966752,
+        "throughput": 183626.92274644307,
+        "config": {
+          "implementation": "python",
+          "threads": 8,
+          "num_keys": 50
+        },
+        "memory": {
+          "peak_memory_mb": 0.07,
+          "current_memory_mb": 202.76,
+          "memory_diff_mb": 0.07
+        }
+      },
+      {
+        "name": "Rust Rate Limiter (8 threads)",
+        "function": "check_rate_limit_concurrent",
+        "iterations": 200,
+        "total_time": 0.015402463031932712,
+        "avg_time": 7.701231515966356e-05,
+        "min_time": 0.0012886120239272714,
+        "max_time": 0.002656542928889394,
+        "std_dev": 0.00041399243832021196,
+        "throughput": 129849.36213471559,
+        "config": {
+          "implementation": "rust",
+          "threads": 8,
+          "num_keys": 50
+        },
+        "memory": {
+          "peak_memory_mb": 0.07,
+          "current_memory_mb": 203.2,
+          "memory_diff_mb": 0.43
+        }
+      }
+    ],
+    "Concurrent Connection Pool": [
+      {
+        "name": "Python Connection Pool (8 threads)",
+        "function": "connection_pool_concurrent",
+        "iterations": 200,
+        "total_time": 0.00312550098169595,
+        "avg_time": 1.562750490847975e-05,
+        "min_time": 9.833392687141895e-05,
+        "max_time": 0.00036364002153277397,
+        "std_dev": 9.025151145796993e-05,
+        "throughput": 63989.741539443254,
+        "config": {
+          "implementation": "python",
+          "threads": 8,
+          "num_endpoints": 10
+        },
+        "memory": {
+          "peak_memory_mb": 0.07,
+          "current_memory_mb": 203.23,
+          "memory_diff_mb": 0.04
+        }
+      },
+      {
+        "name": "Rust Connection Pool (8 threads)",
+        "function": "connection_pool_concurrent",
+        "iterations": 200,
+        "total_time": 0.0026319469325244427,
+        "avg_time": 1.3159734662622213e-05,
+        "min_time": 6.600294727832079e-05,
+        "max_time": 0.0001581059768795967,
+        "std_dev": 3.711086466447697e-05,
+        "throughput": 75989.37407456357,
+        "config": {
+          "implementation": "rust",
+          "threads": 8,
+          "num_endpoints": 10
+        },
+        "memory": {
+          "peak_memory_mb": 0.07,
+          "current_memory_mb": 203.26,
+          "memory_diff_mb": 0.02
+        }
+      }
+    ],
+    "Concurrent Routing": [
+      {
+        "name": "Python Routing (8 threads)",
+        "function": "routing_concurrent",
+        "iterations": 200,
+        "total_time": 0.003135480103082955,
+        "avg_time": 1.5677400515414775e-05,
+        "min_time": 8.257501758635044e-05,
+        "max_time": 0.00024888606276363134,
+        "std_dev": 6.90296872272345e-05,
+        "throughput": 63786.08488165827,
+        "config": {
+          "implementation": "python",
+          "threads": 8,
+          "num_deployments": 20
+        },
+        "memory": {
+          "peak_memory_mb": 0.07,
+          "current_memory_mb": 203.27,
+          "memory_diff_mb": 0.01
+        }
+      },
+      {
+        "name": "Rust Routing (8 threads)",
+        "function": "routing_concurrent",
+        "iterations": 200,
+        "total_time": 0.005473205936141312,
+        "avg_time": 2.736602968070656e-05,
+        "min_time": 0.0003025769256055355,
+        "max_time": 0.0007235350785776973,
+        "std_dev": 0.00016800781185004072,
+        "throughput": 36541.654440469094,
+        "config": {
+          "implementation": "rust",
+          "threads": 8,
+          "num_deployments": 20
+        },
+        "memory": {
+          "peak_memory_mb": 0.07,
+          "current_memory_mb": 203.28,
+          "memory_diff_mb": 0.01
+        }
+      }
+    ],
+    "Memory Pressure Token Counting": [
+      {
+        "name": "Python Memory Pressure (100 x 1000 chars)",
+        "function": "memory_pressure_tokens",
+        "iterations": 50,
+        "total_time": 1.1677504633553326,
+        "avg_time": 0.023355009267106652,
+        "min_time": 0.019087292021140456,
+        "max_time": 0.030899254023097456,
+        "std_dev": 0.002887252940748608,
+        "throughput": 42.817366868203585,
+        "config": {
+          "implementation": "python",
+          "num_texts": 100,
+          "text_size": 1000
+        },
+        "memory": {
+          "peak_memory_mb": 0.04,
+          "current_memory_mb": 204.8,
+          "memory_diff_mb": 0.02
+        }
+      },
+      {
+        "name": "Rust Memory Pressure (100 x 1000 chars)",
+        "function": "memory_pressure_tokens",
+        "iterations": 50,
+        "total_time": 0.6941713766427711,
+        "avg_time": 0.013883427532855422,
+        "min_time": 0.0122362170368433,
+        "max_time": 0.017540356027893722,
+        "std_dev": 0.0009112695763131807,
+        "throughput": 72.02832280670455,
+        "config": {
+          "implementation": "rust",
+          "num_texts": 100,
+          "text_size": 1000
+        },
+        "memory": {
+          "peak_memory_mb": 0.04,
+          "current_memory_mb": 204.81,
+          "memory_diff_mb": 0.0
+        }
+      }
+    ],
+    "Memory Pressure Rate Limiting": [
+      {
+        "name": "Python High-Cardinality Rate Limit (1000 keys)",
+        "function": "memory_pressure_rate_limit",
+        "iterations": 50,
+        "total_time": 0.4575019540498033,
+        "avg_time": 0.009150039080996066,
+        "min_time": 0.00696551997680217,
+        "max_time": 0.010938347899354994,
+        "std_dev": 0.0011594869813472942,
+        "throughput": 109.28915069629853,
+        "config": {
+          "implementation": "python",
+          "num_keys": 1000
+        },
+        "memory": {
+          "peak_memory_mb": 1.71,
+          "current_memory_mb": 211.84,
+          "memory_diff_mb": 7.03
+        }
+      },
+      {
+        "name": "Rust High-Cardinality Rate Limit (1000 keys)",
+        "function": "memory_pressure_rate_limit",
+        "iterations": 50,
+        "total_time": 0.4059276427142322,
+        "avg_time": 0.008118552854284644,
+        "min_time": 0.006592612015083432,
+        "max_time": 0.017239362932741642,
+        "std_dev": 0.0017011957669708978,
+        "throughput": 123.17466153739954,
+        "config": {
+          "implementation": "rust",
+          "num_keys": 1000
+        },
+        "memory": {
+          "peak_memory_mb": 0.04,
+          "current_memory_mb": 223.46,
+          "memory_diff_mb": 11.59
+        }
+      }
+    ]
+  },
+  "comparisons": [
+    {
+      "function": "token_counter",
+      "baseline_avg": 0.0016350759996566922,
+      "accelerated_avg": 0.0030989942781161515,
+      "speedup": 0.5276150431134836,
+      "improvement_percent": -89.5321244252151,
+      "throughput_improvement": -47.238495688651646
+    },
+    {
+      "function": "check_rate_limit",
+      "baseline_avg": 0.0018847116437973454,
+      "accelerated_avg": 0.0012191056238953024,
+      "speedup": 1.5459789593745699,
+      "improvement_percent": 35.31606662974554,
+      "throughput_improvement": 54.597895937457
+    },
+    {
+      "function": "connection_pool",
+      "baseline_avg": 0.00013579897058662026,
+      "accelerated_avg": 4.2141597950831056e-05,
+      "speedup": 3.222444738452122,
+      "improvement_percent": 68.96766023424988,
+      "throughput_improvement": 222.2444738452122
+    },
+    {
+      "function": "get_available_deployment",
+      "baseline_avg": 0.0007556188915623352,
+      "accelerated_avg": 0.0017317624075803906,
+      "speedup": 0.4363294227053248,
+      "improvement_percent": -129.184636186075,
+      "throughput_improvement": -56.36705772946752
+    },
+    {
+      "function": "check_rate_limit_concurrent",
+      "baseline_avg": 5.445824528578669e-05,
+      "accelerated_avg": 7.701231515966356e-05,
+      "speedup": 0.7071368413335284,
+      "improvement_percent": -41.41534446348267,
+      "throughput_improvement": -29.28631586664716
+    },
+    {
+      "function": "connection_pool_concurrent",
+      "baseline_avg": 1.562750490847975e-05,
+      "accelerated_avg": 1.3159734662622213e-05,
+      "speedup": 1.1875243163425462,
+      "improvement_percent": 15.791198021115212,
+      "throughput_improvement": 18.75243163425461
+    },
+    {
+      "function": "routing_concurrent",
+      "baseline_avg": 1.5677400515414775e-05,
+      "accelerated_avg": 2.736602968070656e-05,
+      "speedup": 0.5728781521591189,
+      "improvement_percent": -74.55718920875285,
+      "throughput_improvement": -42.71218478408812
+    },
+    {
+      "function": "memory_pressure_tokens",
+      "baseline_avg": 0.023355009267106652,
+      "accelerated_avg": 0.013883427532855422,
+      "speedup": 1.6822221466447342,
+      "improvement_percent": 40.55481899376109,
+      "throughput_improvement": 68.22221466447341
+    },
+    {
+      "function": "memory_pressure_rate_limit",
+      "baseline_avg": 0.009150039080996066,
+      "accelerated_avg": 0.008118552854284644,
+      "speedup": 1.1270529668556688,
+      "improvement_percent": 11.273025367222097,
+      "throughput_improvement": 12.70529668556688
+    }
+  ]
+}

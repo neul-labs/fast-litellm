@@ -5,13 +5,13 @@ Fast LiteLLM
 High-performance Rust acceleration for LiteLLM.
 
 This package provides drop-in acceleration for performance-critical LiteLLM
-operations using Rust and PyO3, achieving 2-20x performance improvements.
+operations using Rust and PyO3.
 
-Features:
-- 5-20x faster token counting with batch processing
-- 3-8x faster request routing with lock-free data structures
-- 4-12x faster rate limiting with async support
-- 2-5x faster connection management
+Performance (vs production-grade Python with thread-safety):
+- 3.2x faster connection pooling (DashMap lock-free)
+- 1.6x faster rate limiting (atomic operations)
+- 1.5-1.7x faster large text tokenization (tiktoken-rs)
+- 42x more memory efficient for high-cardinality rate limiting
 - Zero configuration - just import before litellm
 - Production-safe with automatic fallback
 
@@ -83,8 +83,18 @@ __all__ = [
 # Apply enhanced acceleration automatically when the module is imported
 if RUST_ACCELERATION_AVAILABLE:
     try:
-        # Apply acceleration using the imported functions
-        apply_acceleration()
+        # Import and apply enhanced acceleration (actual monkeypatching)
+        from . import _rust, enhanced_monkeypatch
+
+        # Create a mock module structure that enhanced_apply_acceleration expects
+        class _RustModule:
+            RUST_ACCELERATION_AVAILABLE = True
+
+        rust_module = _RustModule()
+        rust_module.fast_litellm = _rust
+        rust_module._rust = _rust
+
+        enhanced_monkeypatch.enhanced_apply_acceleration(rust_module)
     except Exception as e:
         warnings.warn(
             f"Fast LiteLLM: Failed to apply acceleration: {e}",
