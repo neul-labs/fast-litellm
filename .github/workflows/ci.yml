@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+  workflows: write
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -141,3 +145,82 @@ jobs:
 
     - name: Run Python security check
       run: uv run pip-audit
+
+  trigger-publish:
+    runs-on: ubuntu-latest
+    needs: [test, lint, security]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Detect Cargo version change
+      id: cargo_version
+      env:
+        BEFORE: ${{ github.event.before }}
+        AFTER: ${{ github.sha }}
+      run: |
+        set -euo pipefail
+        before_ref="${BEFORE:-}"
+        after_ref="${AFTER:-}"
+        if [ -z "$after_ref" ]; then
+          after_ref="$(git rev-parse HEAD)"
+        fi
+        if [ -z "$before_ref" ] || [ "$before_ref" = "0000000000000000000000000000000000000000" ]; then
+          if git rev-parse "${after_ref}^" >/dev/null 2>&1; then
+            before_ref="$(git rev-parse "${after_ref}^")"
+          else
+            before_ref=""
+          fi
+        fi
+
+        BEFORE_REF="$before_ref" AFTER_REF="$after_ref" python <<'PY' | tee -a "$GITHUB_OUTPUT"
+import os
+import subprocess
+
+before = os.environ.get("BEFORE_REF")
+after = os.environ.get("AFTER_REF")
+
+def cargo_version(ref):
+    if not ref:
+        return None
+    try:
+        data = subprocess.check_output(["git", "show", f"{ref}:Cargo.toml"], text=True)
+    except subprocess.CalledProcessError:
+        return None
+
+    version = None
+    in_package = False
+    for raw_line in data.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            in_package = line == "[package]"
+            continue
+        if in_package and line.startswith("version"):
+            _, _, value = line.partition("=")
+            version = value.strip().strip('"').strip("'")
+            break
+
+    return version
+
+before_version = cargo_version(before)
+after_version = cargo_version(after)
+changed = bool(after_version) and after_version != before_version
+
+print(f"changed={'true' if changed else 'false'}")
+print(f"version={after_version or ''}")
+PY
+
+    - name: Trigger publish workflow
+      if: steps.cargo_version.outputs.changed == 'true'
+      uses: peter-evans/workflow-dispatch@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        workflow: publish.yml
+        ref: ${{ github.ref }}
+        inputs:
+          version: ${{ steps.cargo_version.outputs.version }}
