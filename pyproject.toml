@@ -8,10 +8,10 @@ description = "High-performance Rust acceleration for LiteLLM"
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [
-    {name = "Fast LiteLLM Contributors"}
+    {name = "Dipankar Sarkar", email = "me@dipankar.name"}
 ]
 maintainers = [
-    {name = "Fast LiteLLM Contributors"}
+    {name = "Neul Labs"}
 ]
 dynamic = ["version"]
 keywords = [
