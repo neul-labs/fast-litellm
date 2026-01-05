@@ -176,43 +176,43 @@ jobs:
         fi
 
         BEFORE_REF="$before_ref" AFTER_REF="$after_ref" python <<'PY' | tee -a "$GITHUB_OUTPUT"
-import os
-import subprocess
+        import os
+        import subprocess
 
-before = os.environ.get("BEFORE_REF")
-after = os.environ.get("AFTER_REF")
+        before = os.environ.get("BEFORE_REF")
+        after = os.environ.get("AFTER_REF")
 
-def cargo_version(ref):
-    if not ref:
-        return None
-    try:
-        data = subprocess.check_output(["git", "show", f"{ref}:Cargo.toml"], text=True)
-    except subprocess.CalledProcessError:
-        return None
+        def cargo_version(ref):
+            if not ref:
+                return None
+            try:
+                data = subprocess.check_output(["git", "show", f"{ref}:Cargo.toml"], text=True)
+            except subprocess.CalledProcessError:
+                return None
 
-    version = None
-    in_package = False
-    for raw_line in data.splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if line.startswith("[") and line.endswith("]"):
-            in_package = line == "[package]"
-            continue
-        if in_package and line.startswith("version"):
-            _, _, value = line.partition("=")
-            version = value.strip().strip('"').strip("'")
-            break
+            version = None
+            in_package = False
+            for raw_line in data.splitlines():
+                line = raw_line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if line.startswith("[") and line.endswith("]"):
+                    in_package = line == "[package]"
+                    continue
+                if in_package and line.startswith("version"):
+                    _, _, value = line.partition("=")
+                    version = value.strip().strip('"').strip("'")
+                    break
 
-    return version
+            return version
 
-before_version = cargo_version(before)
-after_version = cargo_version(after)
-changed = bool(after_version) and after_version != before_version
+        before_version = cargo_version(before)
+        after_version = cargo_version(after)
+        changed = bool(after_version) and after_version != before_version
 
-print(f"changed={'true' if changed else 'false'}")
-print(f"version={after_version or ''}")
-PY
+        print(f"changed={'true' if changed else 'false'}")
+        print(f"version={after_version or ''}")
+        PY
 
     - name: Trigger publish workflow
       if: steps.cargo_version.outputs.changed == 'true'

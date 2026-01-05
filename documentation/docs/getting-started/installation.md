@@ -4,7 +4,7 @@ Fast LiteLLM can be installed using pip or uv. Prebuilt wheels are available for
 
 ## Requirements
 
-- Python 3.9 or higher
+- Python 3.8 or higher (3.12 recommended)
 - LiteLLM (will be installed automatically if not present)
 
 ## Installing from PyPI
@@ -64,7 +64,7 @@ If you need to build from source (for development or unsupported platforms):
 
 ### Prerequisites
 
-- Python 3.9+
+- Python 3.8+
 - Rust toolchain (1.70+)
 - [maturin](https://www.maturin.rs/) for building Python extensions
 
@@ -104,7 +104,7 @@ If you need to build from source (for development or unsupported platforms):
 
 If you encounter import errors:
 
-1. Ensure you're using a supported Python version (3.9+)
+1. Ensure you're using a supported Python version (3.8+)
 2. Try reinstalling: `pip install --force-reinstall fast-litellm`
 3. Check for conflicting packages: `pip list | grep litellm`
 

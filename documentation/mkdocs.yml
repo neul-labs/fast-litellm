@@ -1,6 +1,7 @@
 site_name: Fast LiteLLM
-site_description: High-performance Rust acceleration for LiteLLM
+site_description: High-performance Rust acceleration for LiteLLM by Neul Labs
 site_url: https://neul-labs.github.io/fast-litellm/
+site_author: Dipankar Sarkar (Neul Labs)
 repo_url: https://github.com/neul-labs/fast-litellm
 repo_name: neul-labs/fast-litellm
 
@@ -83,5 +84,7 @@ extra:
       link: https://github.com/neul-labs/fast-litellm
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/fast-litellm/
+    - icon: fontawesome/solid/globe
+      link: https://www.neul.uk
 
-copyright: Copyright &copy; 2024 Fast LiteLLM Contributors
+copyright: Copyright &copy; 2026 Dipankar Sarkar / Neul Labs

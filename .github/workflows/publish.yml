@@ -148,7 +148,7 @@ jobs:
     needs: [build-linux, build-windows, build-macos, build-sdist]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
-    environment: release
+    environment: pypi
 
     steps:
       - name: Download all artifacts

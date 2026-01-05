@@ -1,12 +1,12 @@
 # Contributing to Fast LiteLLM
 
-Thank you for your interest in contributing!
+Thank you for your interest in contributing! Fast LiteLLM is maintained by Dipankar Sarkar at Neul Labs (me@dipankar.name) — feel free to reach out with questions.
 
 ## Development Setup
 
 ### Prerequisites
 
-- Python 3.9+ (3.12 recommended)
+- Python 3.8+ (3.12 recommended)
 - Rust toolchain 1.70+ (`rustup` recommended)
 - [uv](https://docs.astral.sh/uv/) for package management
 - Git

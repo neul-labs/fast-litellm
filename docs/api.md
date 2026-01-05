@@ -1,6 +1,6 @@
 # API Reference
 
-Complete API documentation for Fast LiteLLM acceleration.
+Complete API documentation for Fast LiteLLM acceleration. Maintained by Dipankar Sarkar at Neul Labs (https://www.neul.uk, me@dipankar.name).
 
 ## Quick Start
 

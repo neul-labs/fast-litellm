@@ -4,6 +4,8 @@
 
 Fast LiteLLM is a drop-in acceleration layer that provides significant performance improvements for [LiteLLM](https://github.com/BerriAI/litellm) operations. Built with Rust and PyO3, it seamlessly integrates with existing code with zero configuration required.
 
+Created by **Dipankar Sarkar** ([me@dipankar.name](mailto:me@dipankar.name)) at [Neul Labs](https://www.neul.uk).
+
 ## Key Benefits
 
 | Component | Speedup | Best For |
@@ -75,7 +77,7 @@ That's it! Just import `fast_litellm` before `litellm` and acceleration is autom
 
 | Component | Supported |
 |-----------|-----------|
-| **Python** | 3.9, 3.10, 3.11, 3.12, 3.13 |
+| **Python** | 3.8, 3.9, 3.10, 3.11, 3.12, 3.13 |
 | **Platforms** | Linux, macOS, Windows |
 | **LiteLLM** | Latest stable release |
 
@@ -87,3 +89,4 @@ Rust is **not** required for installation - prebuilt wheels are available for al
 - [Quick Start](getting-started/quickstart.md) - Get up and running in minutes
 - [Features Overview](features/overview.md) - Learn about all accelerated components
 - [API Reference](api/reference.md) - Complete API documentation
+- [Neul Labs](https://www.neul.uk) - About the team building Fast LiteLLM

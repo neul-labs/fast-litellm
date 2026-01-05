@@ -7,6 +7,8 @@
 
 High-performance Rust acceleration for [LiteLLM](https://github.com/BerriAI/litellm) - providing significant performance improvements for connection pooling, rate limiting, and memory-intensive workloads.
 
+Created by [Dipankar Sarkar](mailto:me@dipankar.name) at [Neul Labs](https://www.neul.uk).
+
 ## Why Fast LiteLLM?
 
 Fast LiteLLM is a drop-in Rust acceleration layer for LiteLLM that provides targeted performance improvements where it matters most:
@@ -129,7 +131,7 @@ See the configuration section in [CLAUDE.md](CLAUDE.md) for more options.
 
 | Component | Supported Versions |
 |-----------|-------------------|
-| **Python** | 3.9, 3.10, 3.11, 3.12, 3.13 |
+| **Python** | 3.8, 3.9, 3.10, 3.11, 3.12, 3.13 |
 | **Platforms** | Linux (x86_64, aarch64), macOS (x86_64, ARM64), Windows (x86_64) |
 | **LiteLLM** | Latest stable release |
 | **PyO3** | 0.24+ |
@@ -143,7 +145,7 @@ For detailed compatibility information, see [COMPATIBILITY.md](COMPATIBILITY.md)
 To contribute or build from source:
 
 **Prerequisites:**
-- Python 3.9+
+- Python 3.8+ (3.12 recommended)
 - Rust toolchain (1.70+)
 - [uv](https://docs.astral.sh/uv/) for package management (recommended)
 - [maturin](https://www.maturin.rs/) for building Python extensions
@@ -205,6 +207,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Links
 
 - **GitHub**: https://github.com/neul-labs/fast-litellm
+- **Website**: https://www.neul.uk
 - **PyPI**: https://pypi.org/project/fast-litellm/
 - **Issues**: https://github.com/neul-labs/fast-litellm/issues
 - **LiteLLM**: https://github.com/BerriAI/litellm

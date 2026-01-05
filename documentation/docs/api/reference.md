@@ -1,6 +1,6 @@
 # API Reference
 
-Complete API reference for Fast LiteLLM.
+Complete API reference for Fast LiteLLM, maintained by Dipankar Sarkar at Neul Labs (https://www.neul.uk, me@dipankar.name).
 
 ## Module: fast_litellm
 
