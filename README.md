@@ -129,6 +129,8 @@ See the configuration section in [CLAUDE.md](CLAUDE.md) for more options.
 
 ## Compatibility
 
+[![Compatibility Tests](https://github.com/neul-labs/fast-litellm/actions/workflows/compatibility-tests.yml/badge.svg)](https://github.com/neul-labs/fast-litellm/actions/workflows/compatibility-tests.yml)
+
 | Component | Supported Versions |
 |-----------|-------------------|
 | **Python** | 3.8, 3.9, 3.10, 3.11, 3.12, 3.13 |
