@@ -1,11 +1,11 @@
 [package]
 name = "fast-litellm"
-version = "0.1.0"
+version = "0.1.6"
 edition = "2021"
 rust-version = "1.70"
 description = "High-performance Rust acceleration for LiteLLM"
 license = "MIT"
-repository = "https://github.com/BerriAI/fast-litellm"
+repository = "https://github.com/neul-labs/fast-litellm"
 
 [lib]
 name = "fast_litellm"
