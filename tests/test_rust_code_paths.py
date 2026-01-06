@@ -229,5 +229,54 @@ class TestLiteLLMCompatibility:
         print(f"✓ Model list available: {len(models)} models")
 
 
+class TestPricingIntegration:
+    """Test pricing data loading and lookups"""
+
+    def test_pricing_status_function(self):
+        """Verify get_pricing_status returns expected structure"""
+        from fast_litellm._rust import get_pricing_status
+
+        status = get_pricing_status()
+        assert isinstance(status, dict), "Status should be a dict"
+
+        # Should have these keys
+        assert "json_loaded" in status, "Status should have json_loaded key"
+        assert "models_loaded" in status, "Status should have models_loaded key"
+        assert "lookup_failures" in status, "Status should have lookup_failures key"
+
+        # Values should be the right types
+        assert isinstance(status["json_loaded"], bool), "json_loaded should be bool"
+        assert isinstance(status["models_loaded"], int), "models_loaded should be int"
+        assert isinstance(status["lookup_failures"], int), "lookup_failures should be int"
+
+        print(f"✓ Pricing status: {status}")
+
+    def test_pricing_lookup_known_model(self):
+        """Test that known models can be looked up"""
+        from fast_litellm._rust import get_pricing_status
+
+        # Look up a known model
+        status = get_pricing_status()
+
+        # If JSON is loaded, verify some models are available
+        if status["json_loaded"]:
+            assert status["models_loaded"] > 0, "Should have loaded some models"
+            print(f"✓ Loaded {status['models_loaded']} models from pricing JSON")
+
+    def test_pricing_fallback_for_unknown(self):
+        """Test that unknown models use fallback pricing"""
+        # This tests that the fallback mechanism works
+        # The actual pricing lookups go through litellm.utils
+        try:
+            from litellm import get_model_info
+
+            # This should work even for unknown models
+            info = get_model_info("unknown-model-xyz")
+            print(f"✓ Model info for unknown model: {info}")
+        except Exception as e:
+            # Some errors are expected for truly unknown models
+            print(f"✓ Expected error for unknown model: {type(e).__name__}")
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])

@@ -14,6 +14,7 @@ import time
 from collections import defaultdict, deque
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
+from functools import min
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -95,6 +96,9 @@ class PerformanceMonitor:
 
         # Performance comparison baseline (Python vs Rust)
         self._baseline_stats: Dict[str, ComponentStats] = {}
+
+        # Shutdown flag for cleanup thread
+        self._shutdown = threading.Event()
 
         # Background cleanup thread
         self._cleanup_thread = threading.Thread(
@@ -214,8 +218,12 @@ class PerformanceMonitor:
         # Calculate percentiles
         if len(durations) >= 20:  # Only calculate percentiles with sufficient data
             sorted_durations = sorted(durations)
-            stats.p95_duration_ms = sorted_durations[int(0.95 * len(sorted_durations))]
-            stats.p99_duration_ms = sorted_durations[int(0.99 * len(sorted_durations))]
+            n = len(sorted_durations)
+            # Use proper percentile interpolation (inclusive bounds)
+            p95_idx = int(0.95 * (n - 1))
+            p99_idx = int(0.99 * (n - 1))
+            stats.p95_duration_ms = sorted_durations[min(p95_idx, n - 1)]
+            stats.p99_duration_ms = sorted_durations[min(p99_idx, n - 1)]
 
         # Calculate throughput (calls per second)
         time_span = (now - recent_metrics[0].timestamp).total_seconds()
@@ -284,16 +292,27 @@ class PerformanceMonitor:
         alert_file = os.environ.get("LITELLM_RUST_ALERT_FILE")
         if alert_file:
             try:
-                with open(alert_file, "a") as f:
+                # Validate path to prevent path traversal
+                resolved_path = os.path.abspath(alert_file)
+                base_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else os.getcwd()
+
+                if not resolved_path.startswith(base_dir):
+                    logger.warning(f"Alert file path {alert_file} is outside allowed directory")
+                    return
+
+                with open(resolved_path, "a") as f:
                     f.write(json.dumps(alert_data) + "\n")
             except Exception as e:
                 logger.error(f"Failed to write alert to file {alert_file}: {e}")
 
     def _cleanup_old_metrics(self):
         """Background thread to clean up old metrics."""
-        while True:
+        while not self._shutdown.is_set():
             try:
-                time.sleep(3600)  # Run every hour
+                self._shutdown.wait(3600)  # Run every hour or until shutdown
+                if self._shutdown.is_set():
+                    break
+
                 cutoff_time = datetime.now() - timedelta(hours=self.retention_hours)
 
                 with self._lock:
@@ -314,6 +333,12 @@ class PerformanceMonitor:
 
             except Exception as e:
                 logger.error(f"Error in cleanup thread: {e}")
+
+    def shutdown(self):
+        """Shutdown the performance monitor and cleanup threads."""
+        self._shutdown.set()
+        if self._cleanup_thread.is_alive():
+            self._cleanup_thread.join(timeout=5.0)
 
     def get_component_stats(self, component: str) -> Optional[ComponentStats]:
         """Get statistics for a specific component."""

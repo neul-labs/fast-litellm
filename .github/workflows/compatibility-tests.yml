@@ -23,6 +23,7 @@ jobs:
   compatibility-matrix:
     name: Python ${{ matrix.python-version }} / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -46,6 +47,9 @@ jobs:
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "compatibility-${{ matrix.os }}"
+          cache-targets: false
 
       - name: Create virtual environment
         run: uv venv --python ${{ matrix.python-version }}
@@ -95,7 +99,7 @@ jobs:
           "
 
       - name: Upload test results
-        if: always()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.os }}-py${{ matrix.python-version }}

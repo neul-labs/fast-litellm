@@ -47,58 +47,68 @@ impl TokenBucket {
     }
 
     pub fn try_consume(&self, tokens: u64) -> bool {
-        self.refill();
-
-        let current_tokens = self.tokens.load(Ordering::Relaxed);
-        if current_tokens >= tokens {
-            let new_tokens = current_tokens - tokens;
-            self.tokens
-                .compare_exchange_weak(
-                    current_tokens,
-                    new_tokens,
-                    Ordering::Relaxed,
-                    Ordering::Relaxed,
-                )
-                .is_ok()
-        } else {
-            false
-        }
-    }
-
-    fn refill(&self) {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis() as u64;
 
-        let last_refill = self.last_refill.load(Ordering::Relaxed);
-        let time_passed = now - last_refill;
-
-        if time_passed >= 1000 {
-            // At least 1 second has passed
-            let tokens_to_add = (time_passed / 1000) * self.refill_rate;
-
+        loop {
             let current_tokens = self.tokens.load(Ordering::Relaxed);
-            let new_tokens = std::cmp::min(current_tokens + tokens_to_add, self.capacity);
+            let last_refill = self.last_refill.load(Ordering::Relaxed);
+            let time_passed = now.saturating_sub(last_refill);
 
-            if self
-                .tokens
-                .compare_exchange_weak(
-                    current_tokens,
-                    new_tokens,
-                    Ordering::Relaxed,
-                    Ordering::Relaxed,
-                )
-                .is_ok()
-            {
-                self.last_refill.store(now, Ordering::Relaxed);
+            // Calculate refill amount
+            let tokens_to_add = if time_passed >= 1000 {
+                (time_passed / 1000) * self.refill_rate
+            } else {
+                0
+            };
+
+            let available = current_tokens.saturating_add(tokens_to_add);
+            if available < tokens {
+                return false;
+            }
+
+            let new_tokens = std::cmp::min(available - tokens, self.capacity);
+
+            // Atomic compare-exchange to prevent TOCTOU race
+            match self.tokens.compare_exchange_weak(
+                current_tokens,
+                new_tokens,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            ) {
+                Ok(_) => {
+                    // Successfully consumed tokens, update last_refill if we added tokens
+                    if tokens_to_add > 0 {
+                        self.last_refill.store(now, Ordering::Relaxed);
+                    }
+                    return true;
+                }
+                Err(_) => {
+                    // Another thread modified tokens, retry
+                    std::hint::spin_loop();
+                }
             }
         }
     }
 
     pub fn available_tokens(&self) -> u64 {
-        self.refill();
-        self.tokens.load(Ordering::Relaxed)
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as u64;
+
+        let current_tokens = self.tokens.load(Ordering::Relaxed);
+        let last_refill = self.last_refill.load(Ordering::Relaxed);
+        let time_passed = now.saturating_sub(last_refill);
+
+        if time_passed >= 1000 {
+            let tokens_to_add = (time_passed / 1000) * self.refill_rate;
+            std::cmp::min(current_tokens.saturating_add(tokens_to_add), self.capacity)
+        } else {
+            current_tokens
+        }
     }
 }
 
@@ -156,9 +166,13 @@ impl SlidingWindowCounter {
 
     fn cleanup_old_windows(&self, now: u64) {
         let current_window = now / self.window_size_ms;
-        let cutoff_window = current_window.saturating_sub(2);
+        // Keep current and previous window, clean up everything older
+        let cutoff_window = current_window.saturating_sub(1);
 
-        self.windows.retain(|&window, _| window > cutoff_window);
+        // Only clean if we have accumulated many windows (prevent excessive cleanup)
+        if self.windows.len() > self.limit as usize * 2 {
+            self.windows.retain(|&window, _| window > cutoff_window);
+        }
     }
 
     pub fn get_remaining(&self) -> u64 {

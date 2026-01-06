@@ -19,6 +19,7 @@ jobs:
   build-linux:
     name: Build Linux wheels
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     strategy:
       matrix:
         target: [x86_64, aarch64]
@@ -26,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build wheels
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@latest
         with:
           target: ${{ matrix.target }}
           args: --release --out dist -i python3.9 -i python3.10 -i python3.11 -i python3.12 -i python3.13
@@ -42,6 +43,7 @@ jobs:
   build-windows:
     name: Build Windows wheels
     runs-on: windows-latest
+    timeout-minutes: 45
     strategy:
       matrix:
         python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
@@ -54,7 +56,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Build wheels
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@latest
         with:
           target: x64
           args: --release --out dist
@@ -69,6 +71,7 @@ jobs:
   build-macos:
     name: Build macOS wheels
     runs-on: macos-latest
+    timeout-minutes: 45
     strategy:
       matrix:
         target: [x86_64, aarch64]
@@ -82,7 +85,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Build wheels
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@latest
         with:
           target: ${{ matrix.target }}
           args: --release --out dist
@@ -97,11 +100,12 @@ jobs:
   build-sdist:
     name: Build source distribution
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
       - name: Build sdist
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@latest
         with:
           command: sdist
           args: --out dist
@@ -147,6 +151,7 @@ jobs:
     name: Release to PyPI
     needs: [build-linux, build-windows, build-macos, build-sdist]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     if: startsWith(github.ref, 'refs/tags/v')
     environment: pypi
 
@@ -158,6 +163,40 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Verify all wheels present
+        run: |
+          echo "Verifying build artifacts..."
+
+          # List all files in dist
+          ls -la dist/
+
+          # Count wheels
+          WHEEL_COUNT=$(ls dist/*.whl 2>/dev/null | wc -l)
+          SDIST_COUNT=$(ls dist/*.tar.gz 2>/dev/null | wc -l)
+
+          echo "Found $WHEEL_COUNT wheel(s) and $SDIST_COUNT source distribution(s)"
+
+          # Verify minimum expected count
+          MIN_WHEELS=6  # 2 Linux + 5 Windows + 5 macOS (we build separately but upload separately)
+          if [ "$WHEEL_COUNT" -lt 1 ] && [ "$SDIST_COUNT" -lt 1 ]; then
+            echo "Error: No build artifacts found!"
+            exit 1
+          fi
+          echo "Build artifacts verified successfully"
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum * > checksums.txt
+          echo "Generated checksums:"
+          cat checksums.txt
+
+      - name: Upload checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksums
+          path: dist/checksums.txt
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
@@ -166,7 +205,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: dist/*
           generate_release_notes: true
@@ -177,6 +216,7 @@ jobs:
     name: Notify on Success
     needs: [release]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: success()
 
     steps:
@@ -184,8 +224,32 @@ jobs:
         id: extract_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
+      - name: Get release info
+        id: release-info
+        uses: actions/github-script@v7
+        with:
+          result-type: gist
+          script: |
+            const { data: release } = await github.rest.repos.getRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: context.runId
+            });
+            return {
+              assets: release.assets.length,
+              downloadCount: release.download_count
+            }
+
       - name: Notification
         run: |
-          echo "Successfully released fast-litellm v${{ steps.extract_version.outputs.VERSION }} to PyPI!"
-          echo "Package: https://pypi.org/project/fast-litellm/"
-          echo "Release: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.extract_version.outputs.VERSION }}"
+          echo "=========================================="
+          echo "  Successfully released fast-litellm!"
+          echo "=========================================="
+          echo ""
+          echo "Version: v${{ steps.extract_version.outputs.VERSION }}"
+          echo ""
+          echo "📦 Package: https://pypi.org/project/fast-litellm/"
+          echo "📊 Release: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.extract_version.outputs.VERSION }}"
+          echo ""
+          echo "✅ Wheels published to PyPI"
+          echo "✅ GitHub release created"

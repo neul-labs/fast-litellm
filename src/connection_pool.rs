@@ -93,10 +93,14 @@ impl ConnectionPool {
         // Try to get an available connection
         if let Some(mut available) = self.available_connections.get_mut(endpoint) {
             if let Some(connection_id) = available.pop() {
+                // Remove from available if connection doesn't exist (stale entry)
                 if let Some(mut conn) = self.connections.get_mut(&connection_id) {
                     conn.use_connection();
                     self.active_connections.fetch_add(1, Ordering::Relaxed);
                     return Some(connection_id);
+                } else {
+                    // Connection was removed but still in available list - clean up
+                    available.retain(|id| id != &connection_id);
                 }
             }
         }
@@ -104,10 +108,14 @@ impl ConnectionPool {
         // Create new connection if within limits
         if self.can_create_connection(endpoint) {
             let connection_id = self.create_connection(endpoint);
+            // Double-check after creation (another thread might have created one)
             if let Some(mut conn) = self.connections.get_mut(&connection_id) {
                 conn.use_connection();
                 self.active_connections.fetch_add(1, Ordering::Relaxed);
                 return Some(connection_id);
+            } else {
+                // Creation failed, decrement total
+                self.total_connections.fetch_sub(1, Ordering::Relaxed);
             }
         }
 
@@ -115,14 +123,23 @@ impl ConnectionPool {
     }
 
     pub fn return_connection(&self, connection_id: &str) {
+        // First check if connection exists and is healthy
         if let Some(connection) = self.connections.get(connection_id) {
+            // Check if connection is healthy before returning
+            if !connection.is_healthy {
+                return;
+            }
+
             let endpoint = connection.endpoint.clone();
 
             // Return to available pool
             let mut available = self.available_connections.entry(endpoint).or_default();
-            available.push(connection_id.to_string());
 
-            self.active_connections.fetch_sub(1, Ordering::Relaxed);
+            // Prevent duplicate returns
+            if !available.contains(&connection_id.to_string()) {
+                available.push(connection_id.to_string());
+                self.active_connections.fetch_sub(1, Ordering::Relaxed);
+            }
         }
     }
 
@@ -228,9 +245,18 @@ impl ConnectionPool {
     }
 
     fn create_connection(&self, endpoint: &str) -> String {
+        // Validate endpoint has a valid scheme
+        if !endpoint.contains("://") {
+            return String::new();
+        }
+
         let connection_id = format!(
             "conn_{}_{}",
-            endpoint.replace("://", "_").replace("/", "_"),
+            endpoint
+                .replace("://", "_")
+                .replace("/", "_")
+                .replace(":", "_")
+                .replace(".", "_"),
             self.total_connections.load(Ordering::Relaxed)
         );
 

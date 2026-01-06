@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use tiktoken_rs::{cl100k_base, o200k_base, p50k_base, p50k_edit, r50k_base, CoreBPE};
 
+use crate::pricing;
+
 /// Cached encodings for different model families
 struct EncodingCache {
     cl100k: Option<CoreBPE>,    // GPT-4, GPT-3.5-turbo, text-embedding-ada-002
@@ -92,39 +94,39 @@ impl EncodingCache {
     fn model_to_encoding(model: &str) -> &'static str {
         let model_lower = model.to_lowercase();
 
-        // o200k_base models (GPT-4o, o1 series)
-        if model_lower.contains("gpt-4o")
-            || model_lower.contains("o1-")
-            || model_lower.contains("o1_")
+        // o200k_base models (GPT-4o, o1 series) - use starts_with for safety
+        if model_lower.starts_with("gpt-4o")
+            || model_lower.starts_with("o1-")
+            || model_lower.starts_with("o1-preview")
+            || model_lower.starts_with("o1-mini")
         {
             return "o200k_base";
         }
 
-        // cl100k_base models (GPT-4, GPT-3.5-turbo, embeddings)
-        if model_lower.contains("gpt-4")
-            || model_lower.contains("gpt-3.5")
-            || model_lower.contains("text-embedding")
-            || model_lower.contains("claude")
-        // Use cl100k for Claude as approximation
+        // cl100k_base models (GPT-4, GPT-3.5-turbo, embeddings) - use starts_with
+        if model_lower.starts_with("gpt-4")
+            || model_lower.starts_with("gpt-3.5-turbo")
+            || model_lower.starts_with("text-embedding")
+            || model_lower.starts_with("claude-")
         {
             return "cl100k_base";
         }
 
-        // p50k_base models (Codex)
-        if model_lower.contains("code-") || model_lower.contains("codex") {
+        // p50k_base models (Codex) - use starts_with
+        if model_lower.starts_with("code-") || model_lower.starts_with("codex") {
             return "p50k_base";
         }
 
-        // p50k_edit models
-        if model_lower.contains("edit") {
+        // p50k_edit models - use starts_with
+        if model_lower.starts_with("text-davinci-edit") {
             return "p50k_edit";
         }
 
-        // r50k_base models (older GPT-3)
-        if model_lower.contains("davinci")
-            || model_lower.contains("curie")
-            || model_lower.contains("babbage")
-            || model_lower.contains("ada")
+        // r50k_base models (older GPT-3) - use starts_with
+        if model_lower.starts_with("davinci")
+            || model_lower.starts_with("curie")
+            || model_lower.starts_with("babbage")
+            || model_lower.starts_with("ada")
         {
             return "r50k_base";
         }
@@ -221,33 +223,35 @@ impl TokenCounter {
         output_tokens: usize,
         model: &str,
     ) -> Result<f64, String> {
-        // Updated pricing (as of 2024)
-        let (input_cost_per_1k, output_cost_per_1k) = match model {
-            // GPT-4o
-            "gpt-4o" | "gpt-4o-2024-08-06" => (0.0025, 0.01),
-            "gpt-4o-mini" | "gpt-4o-mini-2024-07-18" => (0.00015, 0.0006),
+        // Try to get pricing from loaded data first
+        let pricing = pricing::get_pricing_data();
 
-            // GPT-4 Turbo
-            "gpt-4-turbo" | "gpt-4-turbo-2024-04-09" => (0.01, 0.03),
-            "gpt-4-turbo-preview" | "gpt-4-0125-preview" => (0.01, 0.03),
+        if let (Some(input_cost), Some(output_cost)) = (
+            pricing.get_input_cost_per_1m(model),
+            pricing.get_output_cost_per_1m(model),
+        ) {
+            let input_cost_per_1k = input_cost / 1000.0;
+            let output_cost_per_1k = output_cost / 1000.0;
 
-            // GPT-4
-            "gpt-4" | "gpt-4-0613" => (0.03, 0.06),
-            "gpt-4-32k" | "gpt-4-32k-0613" => (0.06, 0.12),
+            let input_cost = (input_tokens as f64 / 1000.0) * input_cost_per_1k;
+            let output_cost = (output_tokens as f64 / 1000.0) * output_cost_per_1k;
+            return Ok(input_cost + output_cost);
+        }
 
-            // GPT-3.5 Turbo
-            "gpt-3.5-turbo" | "gpt-3.5-turbo-0125" => (0.0005, 0.0015),
-            "gpt-3.5-turbo-instruct" => (0.0015, 0.002),
+        // Fall back to default pricing for unknown models
+        let (input_cost_per_1k, output_cost_per_1k) = pricing::default_pricing_for_model(model);
 
-            // Claude models (Anthropic pricing)
-            "claude-3-opus" | "claude-3-opus-20240229" => (0.015, 0.075),
-            "claude-3-sonnet" | "claude-3-sonnet-20240229" => (0.003, 0.015),
-            "claude-3-haiku" | "claude-3-haiku-20240307" => (0.00025, 0.00125),
-            "claude-3-5-sonnet" | "claude-3-5-sonnet-20240620" => (0.003, 0.015),
-
-            // Default
-            _ => (0.001, 0.002),
-        };
+        // Log warning for unknown models (once per model)
+        static WARNED: std::sync::Once = std::sync::Once::new();
+        WARNED.call_once(|| {
+            eprintln!(
+                "WARNING: Unknown model '{}' - using default cost (input: ${}/1M, output: ${}/1M). \
+                Update model pricing with: DOWNLOAD_MODEL_PRICING=1 cargo build",
+                model,
+                input_cost_per_1k as u64,
+                output_cost_per_1k as u64
+            );
+        });
 
         let input_cost = (input_tokens as f64 / 1000.0) * input_cost_per_1k;
         let output_cost = (output_tokens as f64 / 1000.0) * output_cost_per_1k;
@@ -258,39 +262,32 @@ impl TokenCounter {
     pub fn get_model_limits(&self, model: &str) -> HashMap<String, serde_json::Value> {
         let mut limits = HashMap::new();
 
-        let (context_window, max_output) = match model {
-            // GPT-4o
-            "gpt-4o" | "gpt-4o-2024-08-06" => (128000, 16384),
-            "gpt-4o-mini" | "gpt-4o-mini-2024-07-18" => (128000, 16384),
+        // Try to get limits from loaded pricing data first
+        let pricing = pricing::get_pricing_data();
 
-            // GPT-4 Turbo
-            "gpt-4-turbo" | "gpt-4-turbo-2024-04-09" => (128000, 4096),
-            "gpt-4-turbo-preview" | "gpt-4-0125-preview" => (128000, 4096),
+        if let Some(context_window) = pricing.get_context_window(model) {
+            let max_output = pricing.get_max_output(model).unwrap_or(4096);
 
-            // GPT-4
-            "gpt-4" | "gpt-4-0613" => (8192, 4096),
-            "gpt-4-32k" | "gpt-4-32k-0613" => (32768, 4096),
+            limits.insert(
+                "context_window".to_string(),
+                serde_json::Value::Number(serde_json::Number::from(context_window)),
+            );
+            limits.insert(
+                "max_output_tokens".to_string(),
+                serde_json::Value::Number(serde_json::Number::from(max_output)),
+            );
+            return limits;
+        }
 
-            // GPT-3.5 Turbo
-            "gpt-3.5-turbo" | "gpt-3.5-turbo-0125" => (16385, 4096),
-            "gpt-3.5-turbo-16k" => (16385, 4096),
-
-            // Claude models
-            "claude-3-opus" | "claude-3-opus-20240229" => (200000, 4096),
-            "claude-3-sonnet" | "claude-3-sonnet-20240229" => (200000, 4096),
-            "claude-3-haiku" | "claude-3-haiku-20240307" => (200000, 4096),
-            "claude-3-5-sonnet" | "claude-3-5-sonnet-20240620" => (200000, 8192),
-
-            _ => (4096, 4096),
-        };
-
+        // Fall back to default limits
+        let context_window = pricing::default_context_window_for_model(model);
         limits.insert(
             "context_window".to_string(),
             serde_json::Value::Number(serde_json::Number::from(context_window)),
         );
         limits.insert(
             "max_output_tokens".to_string(),
-            serde_json::Value::Number(serde_json::Number::from(max_output)),
+            serde_json::Value::Number(serde_json::Number::from(4096)),
         );
 
         limits

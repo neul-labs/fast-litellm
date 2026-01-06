@@ -6,7 +6,27 @@
 
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
+use rand::Rng;
 use std::collections::HashMap;
+
+/// Generate a random index in [0, len) without modulo bias
+///
+/// Uses rejection sampling to ensure uniform distribution across all indices.
+/// Avoids modulo bias by rejecting values that would cause non-uniform results.
+fn random_index(len: usize) -> usize {
+    if len == 0 {
+        return 0;
+    }
+    let mut rng = rand::thread_rng();
+    // Use full usize range, not just 32 bits
+    let limit = usize::MAX / len * len;
+    loop {
+        let value = rng.gen::<usize>();
+        if value < limit {
+            return value % len;
+        }
+    }
+}
 
 // Helper function to convert HashMap<String, serde_json::Value> to PyDict
 fn convert_hashmap_to_pydict(
@@ -62,6 +82,7 @@ pub mod connection_pool;
 pub mod core;
 pub mod feature_flags;
 pub mod performance_monitor;
+pub mod pricing;
 pub mod rate_limiter;
 pub mod tokens;
 
@@ -81,7 +102,10 @@ impl SimpleTokenCounter {
     #[new]
     #[pyo3(signature = (model_max_tokens=4096))]
     fn new(model_max_tokens: usize) -> Self {
-        Self { model_max_tokens }
+        // Validate model_max_tokens is positive
+        Self {
+            model_max_tokens: model_max_tokens.max(1),
+        }
     }
 
     /// Count tokens in a text string
@@ -135,12 +159,15 @@ impl SimpleRateLimiter {
     #[new]
     #[pyo3(signature = (requests_per_minute=60))]
     fn new(requests_per_minute: u64) -> Self {
-        // Configure default rate limit
+        // Configure default rate limit with proper calculations
+        let requests_per_second = (requests_per_minute as f64 / 60.0).ceil() as u64;
+        let burst_size = ((requests_per_minute as f64 / 10.0).ceil() as u64).max(5);
+
         let config = rate_limiter::RateLimitConfig {
-            requests_per_second: requests_per_minute / 60 + 1,
+            requests_per_second,
             requests_per_minute,
             requests_per_hour: requests_per_minute * 60,
-            burst_size: (requests_per_minute / 10).max(5),
+            burst_size,
         };
         rate_limiter::set_rate_limit_config("default", config);
         Self {
@@ -269,16 +296,13 @@ impl AdvancedRouter {
             }
         }
 
-        if available.is_empty() {
-            if !model_list.is_empty() {
-                let index = rand::random::<usize>() % model_list.len();
-                return Ok(Some(model_list[index].clone_ref(py)));
-            }
-            return Ok(None);
+        if !available.is_empty() {
+            let index = random_index(available.len());
+            return Ok(Some(available[index].clone_ref(py)));
         }
 
-        let index = rand::random::<usize>() % available.len();
-        Ok(Some(available[index].clone_ref(py)))
+        // No matching model found - return None instead of silently using wrong model
+        Ok(None)
     }
 
     #[getter]
@@ -372,6 +396,13 @@ fn record_performance(
 fn get_performance_stats(py: Python, component: Option<String>) -> PyResult<PyObject> {
     let stats = performance_monitor::get_performance_stats(component.as_deref());
     convert_hashmap_to_pydict(py, stats)
+}
+
+/// Get pricing status and metrics
+#[pyfunction]
+fn get_pricing_status(py: Python) -> PyResult<PyObject> {
+    let status = pricing::get_pricing_status();
+    convert_json_value_to_py(py, status)
 }
 
 /// Compare implementations
@@ -521,7 +552,7 @@ fn get_available_deployment(
     let blocked = blocked_models.unwrap_or_default();
 
     for item in model_list.iter() {
-        // Extract model_name from dict
+        // Extract model_name from dict with validation
         if let Ok(dict) = item.downcast_bound::<PyDict>(py) {
             if let Ok(Some(name)) = dict.get_item("model_name") {
                 if let Ok(name_str) = name.extract::<String>() {
@@ -533,18 +564,15 @@ fn get_available_deployment(
         }
     }
 
-    // Return a random selection (simple_shuffle strategy)
-    if available.is_empty() {
-        // Fall back to any model
-        if !model_list.is_empty() {
-            let index = rand::random::<usize>() % model_list.len();
-            return Ok(Some(model_list[index].clone_ref(py)));
-        }
-        return Ok(None);
+    // Return a matching model if found
+    if !available.is_empty() {
+        let index = random_index(available.len());
+        return Ok(Some(available[index].clone_ref(py)));
     }
 
-    let index = rand::random::<usize>() % available.len();
-    Ok(Some(available[index].clone_ref(py)))
+    // No matching model found - return None instead of silently using wrong model
+    // This forces the caller to handle the case explicitly
+    Ok(None)
 }
 
 /// Python module definition
@@ -568,6 +596,7 @@ fn _rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Performance monitoring functions
     m.add_function(wrap_pyfunction!(record_performance, m)?)?;
     m.add_function(wrap_pyfunction!(get_performance_stats, m)?)?;
+    m.add_function(wrap_pyfunction!(get_pricing_status, m)?)?;
     m.add_function(wrap_pyfunction!(compare_implementations, m)?)?;
     m.add_function(wrap_pyfunction!(get_recommendations, m)?)?;
     m.add_function(wrap_pyfunction!(export_performance_data, m)?)?;

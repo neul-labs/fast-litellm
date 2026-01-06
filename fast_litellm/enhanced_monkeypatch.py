@@ -13,7 +13,7 @@ import time
 from contextlib import contextmanager
 from typing import Any, Callable, Dict
 
-from .feature_flags import is_enabled, record_error, record_performance
+from .feature_flags import FeatureState, is_enabled, record_error, record_performance
 
 logger = logging.getLogger(__name__)
 
@@ -21,45 +21,131 @@ logger = logging.getLogger(__name__)
 _original_implementations: Dict[str, Any] = {}
 _rust_implementations: Dict[str, Any] = {}
 _patched_functions: Dict[str, str] = {}  # Maps function -> feature flag name
+_feature_modes: Dict[str, str] = {}  # Cached feature modes for fast paths
 
 
 class PerformanceWrapper:
-    """Wrapper that measures performance and handles fallback."""
+    """
+    Wrapper that measures performance and handles fallback with optimized paths.
+
+    This wrapper determines the optimal execution mode at initialization time:
+    - rust_direct: Always use Rust implementation (no feature flag checks)
+    - python_only: Always use Python implementation (Rust disabled)
+    - conditional: Check feature flags per call (for gradual rollouts)
+
+    The mode is determined once at wrapper creation, avoiding per-call overhead
+    for stable features that are fully enabled or disabled.
+
+    Attributes:
+        original_func: The original Python function
+        rust_func: The Rust-accelerated function
+        feature_name: Feature flag name for this wrapper
+        _mode: Determined execution mode (rust_direct, python_only, or conditional)
+    """
+
+    __slots__ = ('original_func', 'rust_func', 'feature_name', '_mode', '__name__', '__annotations__', '__wrapped__')
 
     def __init__(self, original_func: Callable, rust_func: Callable, feature_name: str):
         self.original_func = original_func
         self.rust_func = rust_func
         self.feature_name = feature_name
-        functools.update_wrapper(self, original_func)
+        self.__wrapped__ = original_func
+
+        # Manually copy wrapper attributes (some may be read-only)
+        try:
+            if hasattr(original_func, '__name__'):
+                self.__name__ = original_func.__name__
+        except (AttributeError, TypeError):
+            pass
+
+        # __doc__ is handled at class level, not in __slots__
+        try:
+            if hasattr(original_func, '__doc__'):
+                object.__setattr__(self, '__doc__', original_func.__doc__)
+        except (AttributeError, TypeError):
+            pass
+
+        try:
+            if hasattr(original_func, '__annotations__'):
+                self.__annotations__ = original_func.__annotations__
+        except (AttributeError, TypeError):
+            pass
+
+        # Determine the optimization mode at initialization
+        # This avoids per-call feature flag checks for stable features
+        self._mode = self._determine_mode()
+
+        # Log mode detection for debugging
+        logger.debug(
+            f"PerformanceWrapper initialized for '{feature_name}': "
+            f"mode={self._mode}"
+        )
+
+    def _determine_mode(self) -> str:
+        """
+        Determine the optimal execution mode based on feature flag state.
+
+        Returns:
+            One of: 'rust_direct', 'python_only', or 'conditional'
+        """
+        try:
+            from .feature_flags import _feature_manager
+            if _feature_manager is not None:
+                feature = _feature_manager._features.get(self.feature_name)
+                if feature is not None:
+                    if feature.state == FeatureState.ENABLED:
+                        return "rust_direct"  # Skip all checks, go straight to Rust
+                    elif feature.state == FeatureState.DISABLED:
+                        return "python_only"  # Never use Rust
+        except Exception:
+            pass
+        return "conditional"  # Default: check feature flags per call
 
     def __call__(self, *args, **kwargs):
         """Execute with performance monitoring and fallback."""
-        request_id = kwargs.get("request_id") or getattr(
-            args[0] if args else None, "request_id", None
-        )
+        mode = self._mode
+
+        # Fast path: Always use Rust
+        if mode == "rust_direct":
+            return self._call_rust_fast(*args, **kwargs)
+
+        # Fast path: Always use Python
+        if mode == "python_only":
+            return self.original_func(*args, **kwargs)
+
+        # Conditional path: Check feature flags
+        return self._call_conditional(*args, **kwargs)
+
+    def _call_rust_fast(self, *args, **kwargs):
+        """Direct Rust call with minimal overhead for always-enabled features."""
+        try:
+            return self.rust_func(*args, **kwargs)
+        except Exception as e:
+            record_error(self.feature_name, e)
+            return self.original_func(*args, **kwargs)
+
+    def _call_conditional(self, *args, **kwargs):
+        """Conditional call with feature flag checking."""
+        # Extract request_id with minimal overhead
+        request_id = kwargs.get("request_id")
+        if not request_id and args:
+            try:
+                request_id = getattr(args[0], "request_id", None)
+            except (IndexError, AttributeError):
+                request_id = None
 
         if not is_enabled(self.feature_name, request_id):
-            # Feature disabled, use original implementation
             return self.original_func(*args, **kwargs)
 
         start_time = time.perf_counter()
         try:
-            # Try Rust implementation
             result = self.rust_func(*args, **kwargs)
-
-            # Record successful performance
             duration_ms = (time.perf_counter() - start_time) * 1000
             record_performance(self.feature_name, duration_ms)
-
             return result
 
         except Exception as e:
-            # Record error and fallback to original
             record_error(self.feature_name, e)
-            logger.warning(
-                f"Rust implementation failed for {self.feature_name}, falling back to Python: {e}"
-            )
-
             try:
                 return self.original_func(*args, **kwargs)
             except Exception as fallback_error:
@@ -76,53 +162,110 @@ class PerformanceWrapper:
 
 
 class AsyncPerformanceWrapper:
-    """Async version of PerformanceWrapper."""
+    """
+    Async wrapper with same optimizations as PerformanceWrapper.
+
+    This wrapper handles async functions with the same three-mode optimization:
+    - rust_direct: Always use Rust implementation
+    - python_only: Always use Python implementation
+    - conditional: Check feature flags per call
+
+    See PerformanceWrapper for mode details.
+    """
+
+    __slots__ = ('original_func', 'rust_func', 'feature_name', '_mode', '__name__', '__wrapped__')
 
     def __init__(self, original_func: Callable, rust_func: Callable, feature_name: str):
         self.original_func = original_func
         self.rust_func = rust_func
         self.feature_name = feature_name
-        functools.update_wrapper(self, original_func)
+        self.__wrapped__ = original_func
+
+        # Manually copy wrapper attributes
+        try:
+            if hasattr(original_func, '__name__'):
+                self.__name__ = original_func.__name__
+        except (AttributeError, TypeError):
+            pass
+
+        # __doc__ is handled at class level
+        try:
+            if hasattr(original_func, '__doc__'):
+                object.__setattr__(self, '__doc__', original_func.__doc__)
+        except (AttributeError, TypeError):
+            pass
+
+        self._mode = self._determine_mode()
+
+        # Log mode detection for debugging
+        logger.debug(
+            f"AsyncPerformanceWrapper initialized for '{feature_name}': "
+            f"mode={self._mode}"
+        )
+
+    def _determine_mode(self) -> str:
+        """
+        Determine the optimal execution mode based on feature flag state.
+
+        Returns:
+            One of: 'rust_direct', 'python_only', or 'conditional'
+        """
+        try:
+            from .feature_flags import _feature_manager
+            if _feature_manager is not None:
+                feature = _feature_manager._features.get(self.feature_name)
+                if feature is not None:
+                    if feature.state == FeatureState.ENABLED:
+                        return "rust_direct"
+                    elif feature.state == FeatureState.DISABLED:
+                        return "python_only"
+        except Exception:
+            pass
+        return "conditional"
 
     async def __call__(self, *args, **kwargs):
         """Execute async with performance monitoring and fallback."""
-        request_id = kwargs.get("request_id") or getattr(
-            args[0] if args else None, "request_id", None
-        )
+        mode = self._mode
+
+        if mode == "rust_direct":
+            return await self._call_rust_fast(*args, **kwargs)
+
+        if mode == "python_only":
+            return await self.original_func(*args, **kwargs)
+
+        return await self._call_conditional(*args, **kwargs)
+
+    async def _call_rust_fast(self, *args, **kwargs):
+        """Direct async Rust call."""
+        try:
+            return await self.rust_func(*args, **kwargs)
+        except Exception as e:
+            record_error(self.feature_name, e)
+            return await self.original_func(*args, **kwargs)
+
+    async def _call_conditional(self, *args, **kwargs):
+        """Conditional async call."""
+        request_id = kwargs.get("request_id")
+        if not request_id and args:
+            try:
+                request_id = getattr(args[0], "request_id", None)
+            except (IndexError, AttributeError):
+                request_id = None
 
         if not is_enabled(self.feature_name, request_id):
-            # Feature disabled, use original implementation
-            if asyncio.iscoroutinefunction(self.original_func):
-                return await self.original_func(*args, **kwargs)
-            else:
-                return self.original_func(*args, **kwargs)
+            return await self.original_func(*args, **kwargs)
 
         start_time = time.perf_counter()
         try:
-            # Try Rust implementation
-            if asyncio.iscoroutinefunction(self.rust_func):
-                result = await self.rust_func(*args, **kwargs)
-            else:
-                result = self.rust_func(*args, **kwargs)
-
-            # Record successful performance
+            result = await self.rust_func(*args, **kwargs)
             duration_ms = (time.perf_counter() - start_time) * 1000
             record_performance(self.feature_name, duration_ms)
-
             return result
 
         except Exception as e:
-            # Record error and fallback to original
             record_error(self.feature_name, e)
-            logger.warning(
-                f"Rust implementation failed for {self.feature_name}, falling back to Python: {e}"
-            )
-
             try:
-                if asyncio.iscoroutinefunction(self.original_func):
-                    return await self.original_func(*args, **kwargs)
-                else:
-                    return self.original_func(*args, **kwargs)
+                return await self.original_func(*args, **kwargs)
             except Exception as fallback_error:
                 logger.error(
                     f"Both Rust and Python implementations failed for {self.feature_name}: {fallback_error}"
@@ -234,18 +377,24 @@ def enhanced_patch_class(
                     # Fallback to original class
                     return original_class(*args, **kwargs)
 
-            # Copy attributes from original class
+            # Copy attributes from original class (only safe, non-dunder attributes)
+            # Exclude private/special attributes that could cause issues
+            excluded_attrs = {
+                "__class__", "__delattr__", "__dict__", "__doc__", "__format__",
+                "__getattribute__", "__init__", "__init_subclass__", "__new__",
+                "__reduce__", "__reduce_ex__", "__repr__", "__setattr__",
+                "__subclasshook__", "__weakref__", "__mro_entries__", "__matches__",
+            }
             for attr_name in dir(original_class):
-                if not attr_name.startswith("__") or attr_name in (
-                    "__doc__",
-                    "__module__",
-                ):
-                    try:
-                        setattr(
-                            HybridClass, attr_name, getattr(original_class, attr_name)
-                        )
-                    except (AttributeError, TypeError):
-                        pass
+                if not attr_name.startswith("_") or attr_name in ("__doc__", "__module__"):
+                    if attr_name not in excluded_attrs:
+                        try:
+                            attr_value = getattr(original_class, attr_name)
+                            # Only copy safe types
+                            if not callable(attr_value) or attr_name in ("__doc__", "__module__"):
+                                setattr(HybridClass, attr_name, attr_value)
+                        except (AttributeError, TypeError):
+                            pass
 
             # Replace with hybrid class
             setattr(module, class_name, HybridClass)
@@ -290,8 +439,6 @@ def enhanced_apply_acceleration(rust_extensions_module) -> bool:
     # Get the Rust extension modules
     try:
         fast_litellm = rust_extensions_module.fast_litellm
-        _rust = rust_extensions_module._rust
-        _rust = rust_extensions_module._rust
         _rust = rust_extensions_module._rust
     except AttributeError as e:
         logger.error(f"Could not access Rust extensions: {e}")

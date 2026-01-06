@@ -12,6 +12,8 @@ import threading
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, Optional, Set
+import hmac
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -156,9 +158,11 @@ class FeatureFlagManager:
                     elif env_value.startswith("canary:"):
                         state = FeatureState.CANARY
                         percentage = float(env_value.split(":")[1])
+                        percentage = percentage.clamp(0.0, 100.0)  # Validate bounds
                     elif env_value.startswith("rollout:"):
                         state = FeatureState.GRADUAL_ROLLOUT
                         percentage = float(env_value.split(":")[1])
+                        percentage = percentage.clamp(0.0, 100.0)  # Validate bounds
                     else:
                         continue
 
@@ -175,7 +179,20 @@ class FeatureFlagManager:
     def _load_config_file(self, config_file: str):
         """Load feature flags from a JSON configuration file."""
         try:
-            with open(config_file, "r") as f:
+            # Resolve path to prevent path traversal attacks
+            resolved_path = os.path.abspath(config_file)
+            base_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else os.getcwd()
+
+            # Ensure the resolved path is within the base directory
+            if not resolved_path.startswith(base_dir):
+                logger.warning(f"Config file path {config_file} is outside allowed directory")
+                return
+
+            if not os.path.exists(resolved_path):
+                logger.warning(f"Config file not found: {config_file}")
+                return
+
+            with open(resolved_path, "r") as f:
                 config = json.load(f)
 
             for feature_name, feature_config in config.get("features", {}).items():
@@ -198,13 +215,14 @@ class FeatureFlagManager:
         except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
             logger.warning(f"Failed to load feature config from {config_file}: {e}")
 
-    def is_enabled(self, feature_name: str, request_id: Optional[str] = None) -> bool:
+    def is_enabled(self, feature_name: str, request_id: Optional[str] = None, visited: Optional[Set[str]] = None) -> bool:
         """
         Check if a feature is enabled for the current request.
 
         Args:
             feature_name: Name of the feature to check
             request_id: Optional request ID for consistent rollout decisions
+            visited: Set of visited features to detect circular dependencies
 
         Returns:
             True if the feature should be enabled, False otherwise
@@ -215,9 +233,19 @@ class FeatureFlagManager:
 
             feature = self._features[feature_name]
 
+            # Initialize visited set for cycle detection
+            if visited is None:
+                visited = set()
+
+            # Check for circular dependency
+            if feature_name in visited:
+                logger.warning(f"Circular dependency detected for feature: {feature_name}")
+                return False
+            visited.add(feature_name)
+
             # Check dependencies first
             for dep in feature.dependencies:
-                if not self.is_enabled(dep, request_id):
+                if not self.is_enabled(dep, request_id, visited):
                     return False
 
             # Check state
@@ -232,14 +260,33 @@ class FeatureFlagManager:
             ):
                 # Use consistent rollout based on request_id or random
                 if request_id:
-                    import hashlib
+                    # Use HMAC with a secret key to prevent gaming
+                    # If no secret is configured, use a hash of machine-specific values
+                    # This prevents gaming but doesn't expose a hardcoded secret
+                    secret_key = os.environ.get("LITELLM_ROLLOUT_SECRET")
 
-                    hash_value = int(
-                        hashlib.md5(
-                            f"{feature_name}:{request_id}".encode()
-                        ).hexdigest()[:8],
-                        16,
-                    )
+                    if secret_key:
+                        # Use configured secret (prefer secure configuration)
+                        hash_value = int(
+                            hmac.new(
+                                secret_key.encode(),
+                                f"{feature_name}:{request_id}".encode(),
+                                hashlib.sha256
+                            ).hexdigest()[:8],
+                            16,
+                        )
+                    else:
+                        # Fallback to hash without secret (less secure but no secret exposure)
+                        # Use multiple hash rounds to make reversal harder
+                        hash_value = int(
+                            hashlib.pbkdf2_hmac(
+                                'sha256',
+                                f"{feature_name}:{request_id}".encode(),
+                                b"fast-litellm-rollout-salt",  # Fixed salt, not a secret
+                                1000,  # Number of iterations
+                            ).hexdigest()[:8],
+                            16,
+                        )
                     percentage = (hash_value % 100) + 1
                 else:
                     import random
@@ -276,7 +323,7 @@ class FeatureFlagManager:
                     f"Latest error: {error}"
                 )
                 feature.state = FeatureState.DISABLED
-                self._error_counts[feature_name] = 0  # Reset counter
+                # Keep the error count to show history, don't reset it
 
     def record_performance(self, feature_name: str, duration_ms: float):
         """

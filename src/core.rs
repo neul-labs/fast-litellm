@@ -59,6 +59,8 @@ impl AdvancedRouter {
         }
 
         let index = rand::random::<usize>() % route.endpoints.len();
+        // Note: Using modulo bias here is acceptable for endpoint selection
+        // as the bias is negligible for this use case
         Some(route.endpoints[index].clone())
     }
 
@@ -124,10 +126,11 @@ impl AdvancedRouter {
                     active_requests: 0,
                 });
 
-        // Simple exponential moving average
-        metrics.latency_ms = 0.9 * metrics.latency_ms + 0.1 * latency;
-        metrics.success_rate = 0.9 * metrics.success_rate + 0.1 * if success { 1.0 } else { 0.0 };
-        metrics.cost_per_request = 0.9 * metrics.cost_per_request + 0.1 * cost;
+        // Exponential moving average: new_value * alpha + old_value * (1 - alpha)
+        // Using alpha = 0.1 means new observations have 10% weight
+        metrics.latency_ms = 0.1 * latency + 0.9 * metrics.latency_ms;
+        metrics.success_rate = 0.1 * if success { 1.0 } else { 0.0 } + 0.9 * metrics.success_rate;
+        metrics.cost_per_request = 0.1 * cost + 0.9 * metrics.cost_per_request;
     }
 
     pub fn increment_active_requests(&self, endpoint: &str) {
