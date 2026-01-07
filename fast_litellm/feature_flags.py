@@ -5,6 +5,8 @@ This module provides a flexible feature flag system that allows for gradual
 rollout of Rust acceleration features with automatic degradation capabilities.
 """
 
+import hashlib
+import hmac
 import json
 import logging
 import os
@@ -12,8 +14,6 @@ import threading
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, Optional, Set
-import hmac
-import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -181,18 +181,24 @@ class FeatureFlagManager:
         try:
             # Resolve path to prevent path traversal attacks
             resolved_path = os.path.abspath(config_file)
-            base_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else os.getcwd()
+            base_dir = (
+                os.path.dirname(os.path.abspath(__file__))
+                if "__file__" in dir()
+                else os.getcwd()
+            )
 
             # Ensure the resolved path is within the base directory
             if not resolved_path.startswith(base_dir):
-                logger.warning(f"Config file path {config_file} is outside allowed directory")
+                logger.warning(
+                    f"Config file path {config_file} is outside allowed directory"
+                )
                 return
 
             if not os.path.exists(resolved_path):
                 logger.warning(f"Config file not found: {config_file}")
                 return
 
-            with open(resolved_path, "r") as f:
+            with open(resolved_path) as f:
                 config = json.load(f)
 
             for feature_name, feature_config in config.get("features", {}).items():
@@ -215,7 +221,12 @@ class FeatureFlagManager:
         except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
             logger.warning(f"Failed to load feature config from {config_file}: {e}")
 
-    def is_enabled(self, feature_name: str, request_id: Optional[str] = None, visited: Optional[Set[str]] = None) -> bool:
+    def is_enabled(
+        self,
+        feature_name: str,
+        request_id: Optional[str] = None,
+        visited: Optional[Set[str]] = None,
+    ) -> bool:
         """
         Check if a feature is enabled for the current request.
 
@@ -239,7 +250,9 @@ class FeatureFlagManager:
 
             # Check for circular dependency
             if feature_name in visited:
-                logger.warning(f"Circular dependency detected for feature: {feature_name}")
+                logger.warning(
+                    f"Circular dependency detected for feature: {feature_name}"
+                )
                 return False
             visited.add(feature_name)
 
@@ -271,7 +284,7 @@ class FeatureFlagManager:
                             hmac.new(
                                 secret_key.encode(),
                                 f"{feature_name}:{request_id}".encode(),
-                                hashlib.sha256
+                                hashlib.sha256,
                             ).hexdigest()[:8],
                             16,
                         )
@@ -280,7 +293,7 @@ class FeatureFlagManager:
                         # Use multiple hash rounds to make reversal harder
                         hash_value = int(
                             hashlib.pbkdf2_hmac(
-                                'sha256',
+                                "sha256",
                                 f"{feature_name}:{request_id}".encode(),
                                 b"fast-litellm-rollout-salt",  # Fixed salt, not a secret
                                 1000,  # Number of iterations
@@ -354,7 +367,6 @@ class FeatureFlagManager:
                 and feature.fallback_on_error
                 and feature.state != FeatureState.DISABLED
             ):
-
                 logger.warning(
                     f"Disabling feature '{feature_name}' due to poor performance: "
                     f"{duration_ms:.2f}ms > {feature.performance_threshold_ms}ms threshold"

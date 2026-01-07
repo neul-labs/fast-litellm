@@ -1,0 +1,29 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: Run ruff linter
+        entry: uv run ruff check fast_litellm/ tests/
+        language: system
+        pass_filenames: false
+        types: [python]
+        stages: [pre-commit]
+
+      - id: ruff-format
+        name: Check ruff formatting
+        entry: uv run ruff format --check fast_litellm/ tests/
+        language: system
+        pass_filenames: false
+        types: [python]
+        stages: [pre-commit]
+
+      - id: isort-check
+        name: Check import sorting
+        entry: uv run isort --check-only fast_litellm/ tests/
+        language: system
+        pass_filenames: false
+        types: [python]
+        stages: [pre-commit]
+
+  # Note: Run `uv run pip-audit` separately to check for vulnerabilities
+  # (pip-audit has issues detecting uv venv in pre-commit hooks)

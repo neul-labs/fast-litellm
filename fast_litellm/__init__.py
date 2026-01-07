@@ -28,7 +28,7 @@ import warnings
 
 try:
     # Try to import the Rust extensions
-    from ._rust import *
+    from ._rust import *  # noqa: F403
 
     # Mark that Rust acceleration is available
     RUST_ACCELERATION_AVAILABLE = True

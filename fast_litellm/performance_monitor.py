@@ -10,7 +10,6 @@ import logging
 import os
 import statistics
 import threading
-import time
 from collections import defaultdict, deque
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
@@ -294,10 +293,16 @@ class PerformanceMonitor:
             try:
                 # Validate path to prevent path traversal
                 resolved_path = os.path.abspath(alert_file)
-                base_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else os.getcwd()
+                base_dir = (
+                    os.path.dirname(os.path.abspath(__file__))
+                    if "__file__" in dir()
+                    else os.getcwd()
+                )
 
                 if not resolved_path.startswith(base_dir):
-                    logger.warning(f"Alert file path {alert_file} is outside allowed directory")
+                    logger.warning(
+                        f"Alert file path {alert_file} is outside allowed directory"
+                    )
                     return
 
                 with open(resolved_path, "a") as f:

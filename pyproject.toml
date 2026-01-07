@@ -44,11 +44,11 @@ classifiers = [
     "Topic :: System :: Networking",
     "Typing :: Typed",
 ]
-requires-python = ">=3.8.1"
+requires-python = ">=3.9"
 dependencies = [
     "pydantic>=1.10.0",
     "tiktoken>=0.5.0",
-    "aiohttp>=3.8.0",
+    "aiohttp>=3.13.3",
     "httpx>=0.24.0",
     "litellm>=1.80.0",
 ]
@@ -204,6 +204,8 @@ exclude_lines = [
 [tool.ruff]
 target-version = "py38"
 line-length = 88
+
+[tool.ruff.lint]
 select = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
@@ -219,7 +221,7 @@ ignore = [
     "C901",  # too complex
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "tests/*" = ["B011"]
 

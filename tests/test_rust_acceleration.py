@@ -24,9 +24,9 @@ class TestRustAccelerationAvailable:
 
     def test_rust_module_available(self):
         """Verify Rust module is loaded"""
-        assert (
-            fast_litellm.RUST_ACCELERATION_AVAILABLE
-        ), "Rust acceleration should be available after build"
+        assert fast_litellm.RUST_ACCELERATION_AVAILABLE, (
+            "Rust acceleration should be available after build"
+        )
 
     def test_rust_functions_exported(self):
         """Verify Rust functions are exported"""

@@ -5,7 +5,6 @@ This module provides an advanced monkeypatching system that integrates with
 the feature flag system for safe, gradual rollout of Rust acceleration.
 """
 
-import asyncio
 import functools
 import importlib
 import logging
@@ -43,7 +42,15 @@ class PerformanceWrapper:
         _mode: Determined execution mode (rust_direct, python_only, or conditional)
     """
 
-    __slots__ = ('original_func', 'rust_func', 'feature_name', '_mode', '__name__', '__annotations__', '__wrapped__')
+    __slots__ = (
+        "original_func",
+        "rust_func",
+        "feature_name",
+        "_mode",
+        "__name__",
+        "__annotations__",
+        "__wrapped__",
+    )
 
     def __init__(self, original_func: Callable, rust_func: Callable, feature_name: str):
         self.original_func = original_func
@@ -53,20 +60,20 @@ class PerformanceWrapper:
 
         # Manually copy wrapper attributes (some may be read-only)
         try:
-            if hasattr(original_func, '__name__'):
+            if hasattr(original_func, "__name__"):
                 self.__name__ = original_func.__name__
         except (AttributeError, TypeError):
             pass
 
         # __doc__ is handled at class level, not in __slots__
         try:
-            if hasattr(original_func, '__doc__'):
-                object.__setattr__(self, '__doc__', original_func.__doc__)
+            if hasattr(original_func, "__doc__"):
+                object.__setattr__(self, "__doc__", original_func.__doc__)
         except (AttributeError, TypeError):
             pass
 
         try:
-            if hasattr(original_func, '__annotations__'):
+            if hasattr(original_func, "__annotations__"):
                 self.__annotations__ = original_func.__annotations__
         except (AttributeError, TypeError):
             pass
@@ -77,8 +84,7 @@ class PerformanceWrapper:
 
         # Log mode detection for debugging
         logger.debug(
-            f"PerformanceWrapper initialized for '{feature_name}': "
-            f"mode={self._mode}"
+            f"PerformanceWrapper initialized for '{feature_name}': mode={self._mode}"
         )
 
     def _determine_mode(self) -> str:
@@ -90,6 +96,7 @@ class PerformanceWrapper:
         """
         try:
             from .feature_flags import _feature_manager
+
             if _feature_manager is not None:
                 feature = _feature_manager._features.get(self.feature_name)
                 if feature is not None:
@@ -173,7 +180,14 @@ class AsyncPerformanceWrapper:
     See PerformanceWrapper for mode details.
     """
 
-    __slots__ = ('original_func', 'rust_func', 'feature_name', '_mode', '__name__', '__wrapped__')
+    __slots__ = (
+        "original_func",
+        "rust_func",
+        "feature_name",
+        "_mode",
+        "__name__",
+        "__wrapped__",
+    )
 
     def __init__(self, original_func: Callable, rust_func: Callable, feature_name: str):
         self.original_func = original_func
@@ -183,15 +197,15 @@ class AsyncPerformanceWrapper:
 
         # Manually copy wrapper attributes
         try:
-            if hasattr(original_func, '__name__'):
+            if hasattr(original_func, "__name__"):
                 self.__name__ = original_func.__name__
         except (AttributeError, TypeError):
             pass
 
         # __doc__ is handled at class level
         try:
-            if hasattr(original_func, '__doc__'):
-                object.__setattr__(self, '__doc__', original_func.__doc__)
+            if hasattr(original_func, "__doc__"):
+                object.__setattr__(self, "__doc__", original_func.__doc__)
         except (AttributeError, TypeError):
             pass
 
@@ -212,6 +226,7 @@ class AsyncPerformanceWrapper:
         """
         try:
             from .feature_flags import _feature_manager
+
             if _feature_manager is not None:
                 feature = _feature_manager._features.get(self.feature_name)
                 if feature is not None:
@@ -380,18 +395,37 @@ def enhanced_patch_class(
             # Copy attributes from original class (only safe, non-dunder attributes)
             # Exclude private/special attributes that could cause issues
             excluded_attrs = {
-                "__class__", "__delattr__", "__dict__", "__doc__", "__format__",
-                "__getattribute__", "__init__", "__init_subclass__", "__new__",
-                "__reduce__", "__reduce_ex__", "__repr__", "__setattr__",
-                "__subclasshook__", "__weakref__", "__mro_entries__", "__matches__",
+                "__class__",
+                "__delattr__",
+                "__dict__",
+                "__doc__",
+                "__format__",
+                "__getattribute__",
+                "__init__",
+                "__init_subclass__",
+                "__new__",
+                "__reduce__",
+                "__reduce_ex__",
+                "__repr__",
+                "__setattr__",
+                "__subclasshook__",
+                "__weakref__",
+                "__mro_entries__",
+                "__matches__",
             }
             for attr_name in dir(original_class):
-                if not attr_name.startswith("_") or attr_name in ("__doc__", "__module__"):
+                if not attr_name.startswith("_") or attr_name in (
+                    "__doc__",
+                    "__module__",
+                ):
                     if attr_name not in excluded_attrs:
                         try:
                             attr_value = getattr(original_class, attr_name)
                             # Only copy safe types
-                            if not callable(attr_value) or attr_name in ("__doc__", "__module__"):
+                            if not callable(attr_value) or attr_name in (
+                                "__doc__",
+                                "__module__",
+                            ):
                                 setattr(HybridClass, attr_name, attr_value)
                         except (AttributeError, TypeError):
                             pass
@@ -606,9 +640,9 @@ def temporary_disable_feature(feature_name: str):
         with _feature_manager._lock:
             if feature_name in _feature_manager._features:
                 original_state = _feature_manager._features[feature_name].state
-                _feature_manager._features[feature_name].state = (
-                    _feature_manager.FeatureState.DISABLED
-                )
+                _feature_manager._features[
+                    feature_name
+                ].state = _feature_manager.FeatureState.DISABLED
 
         yield
 

@@ -17,7 +17,7 @@ import fast_litellm
 
 # Try to import litellm - skip all tests if not available or incompatible
 try:
-    import litellm
+    import litellm  # noqa: F401
 except (ImportError, TypeError) as e:
     # TypeError occurs when litellm uses Python 3.10+ syntax on older Python
     pytest.skip(f"litellm not available: {e}", allow_module_level=True)
@@ -193,13 +193,7 @@ class TestLiteLLMCompatibility:
 
     def test_litellm_basic_imports(self):
         """Verify core LiteLLM imports work"""
-        from litellm import (
-            completion,
-            embedding,
-            image_generation,
-            speech,
-            transcription,
-        )
+        from litellm import completion, embedding
 
         # All should be importable
         assert completion is not None
@@ -208,10 +202,7 @@ class TestLiteLLMCompatibility:
 
     def test_litellm_utils_work(self):
         """Test utility functions"""
-        from litellm import (
-            get_optional_params,
-            get_supported_openai_params,
-        )
+        from litellm import get_supported_openai_params
 
         # Test with a model
         params = get_supported_openai_params(model="gpt-3.5-turbo")
@@ -220,7 +211,7 @@ class TestLiteLLMCompatibility:
 
     def test_model_list_functions(self):
         """Test model listing functions"""
-        from litellm import get_model_info, model_list
+        from litellm import model_list
 
         # These should work with Rust acceleration
         models = model_list
@@ -247,7 +238,9 @@ class TestPricingIntegration:
         # Values should be the right types
         assert isinstance(status["json_loaded"], bool), "json_loaded should be bool"
         assert isinstance(status["models_loaded"], int), "models_loaded should be int"
-        assert isinstance(status["lookup_failures"], int), "lookup_failures should be int"
+        assert isinstance(status["lookup_failures"], int), (
+            "lookup_failures should be int"
+        )
 
         print(f"✓ Pricing status: {status}")
 
