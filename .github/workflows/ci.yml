@@ -153,7 +153,7 @@ jobs:
 
     - name: Install cargo-audit
       if: steps.cache-cargo-audit.outputs.cache-hit != 'true'
-      run: cargo install cargo-audit
+      run: cargo install cargo-audit --force
 
     - name: Run Rust security audit
       run: cargo audit
