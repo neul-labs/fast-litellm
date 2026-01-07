@@ -238,9 +238,9 @@ class TestPricingIntegration:
         # Values should be the right types
         assert isinstance(status["json_loaded"], bool), "json_loaded should be bool"
         assert isinstance(status["models_loaded"], int), "models_loaded should be int"
-        assert isinstance(status["lookup_failures"], int), (
-            "lookup_failures should be int"
-        )
+        assert isinstance(
+            status["lookup_failures"], int
+        ), "lookup_failures should be int"
 
         print(f"✓ Pricing status: {status}")
 

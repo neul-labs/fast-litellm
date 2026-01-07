@@ -196,8 +196,26 @@ jobs:
               }
               results.append(current_info)
 
-          # Sort results
-          results.sort(key=lambda x: (x['platform'], x['python_version']))
+          # Aggregate results by platform
+          platforms = {}
+          for r in results:
+              p = r['platform']
+              if p not in platforms:
+                  platforms[p] = {
+                      'versions': [],
+                      'passed': 0,
+                      'failed': 0,
+                      'total_tests': 0,
+                      'fast_litellm_version': r.get('fast_litellm_version', 'N/A'),
+                      'litellm_version': r.get('litellm_version', 'N/A'),
+                      'rust_available': r.get('rust_available', False),
+                  }
+              platforms[p]['versions'].append(r['python_version'])
+              if r.get('tests_passed', False):
+                  platforms[p]['passed'] += 1
+              else:
+                  platforms[p]['failed'] += 1
+              platforms[p]['total_tests'] += r.get('test_count', 0)
 
           # Generate markdown report
           report = []
@@ -206,22 +224,25 @@ jobs:
           report.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
           report.append("")
 
-          # Summary table
+          # Summary table - one row per platform
           report.append("## Test Matrix Results")
           report.append("")
-          report.append("| Platform | Python | Fast LiteLLM | LiteLLM | Rust | Tests | Status |")
-          report.append("|----------|--------|--------------|---------|------|-------|--------|")
+          report.append("| Platform | Python Versions | Fast LiteLLM | LiteLLM | Rust | Tests | Status |")
+          report.append("|----------|-----------------|--------------|---------|------|-------|--------|")
 
-          for r in results:
-              status = "✅ Pass" if r.get('tests_passed', False) else "❌ Fail"
-              rust = "✅" if r.get('rust_available', False) else "❌"
-              tests = r.get('test_count', 'N/A')
-              report.append(
-                  f"| {r['platform']} | {r['python_version']} | "
-                  f"{r.get('fast_litellm_version', 'N/A')} | "
-                  f"{r.get('litellm_version', 'N/A')} | "
-                  f"{rust} | {tests} | {status} |"
-              )
+          for platform in ['Darwin', 'Linux', 'Windows']:
+              if platform in platforms:
+                  p = platforms[platform]
+                  version_list = ', '.join(sorted(p['versions'], key=lambda v: [int(x) for x in v.split('.')]))
+                  rust = "✅" if p.get('rust_available', False) else "❌"
+                  tests = p['total_tests'] // len(p['versions']) if p['total_tests'] > 0 else 'N/A'
+                  status = "✅ Pass" if p['failed'] == 0 else "❌ Fail"
+                  report.append(
+                      f"| {platform} | {version_list} | "
+                      f"{p['fast_litellm_version']} | "
+                      f"{p['litellm_version']} | "
+                      f"{rust} | {tests} | {status} |"
+                  )
 
           report.append("")
 
@@ -229,27 +250,18 @@ jobs:
           report.append("## Platform Summary")
           report.append("")
 
-          platforms = {}
-          for r in results:
-              p = r['platform']
-              if p not in platforms:
-                  platforms[p] = {'passed': 0, 'failed': 0, 'versions': []}
-              if r.get('tests_passed', False):
-                  platforms[p]['passed'] += 1
-              else:
-                  platforms[p]['failed'] += 1
-              platforms[p]['versions'].append(r['python_version'])
-
-          for platform, data in platforms.items():
-              total = data['passed'] + data['failed']
-              status = "✅" if data['failed'] == 0 else "⚠️"
-              report.append(f"### {platform} {status}")
-              report.append("")
-              report.append(f"- **Tested Python versions**: {', '.join(sorted(set(data['versions'])))}")
-              report.append(f"- **Passed**: {data['passed']}/{total}")
-              if data['failed'] > 0:
-                  report.append(f"- **Failed**: {data['failed']}/{total}")
-              report.append("")
+          for platform in ['Darwin', 'Linux', 'Windows']:
+              if platform in platforms:
+                  p = platforms[platform]
+                  total = p['passed'] + p['failed']
+                  status = "✅" if p['failed'] == 0 else "⚠️"
+                  report.append(f"### {platform} {status}")
+                  report.append("")
+                  report.append(f"- **Tested Python versions**: {', '.join(sorted(p['versions'], key=lambda v: [int(x) for x in v.split('.')]))}")
+                  report.append(f"- **Passed**: {p['passed']}/{total}")
+                  if p['failed'] > 0:
+                      report.append(f"- **Failed**: {p['failed']}/{total}")
+                  report.append("")
 
           # Python version summary
           report.append("## Python Version Summary")
@@ -268,7 +280,7 @@ jobs:
           report.append("| Python Version | Platforms Passed | Platforms Failed | Status |")
           report.append("|----------------|------------------|------------------|--------|")
 
-          for v in sorted(py_versions.keys()):
+          for v in sorted(py_versions.keys(), key=lambda v: [int(x) for x in v.split('.')]):
               data = py_versions[v]
               status = "✅" if data['failed'] == 0 else "❌"
               report.append(f"| {v} | {data['passed']} | {data['failed']} | {status} |")

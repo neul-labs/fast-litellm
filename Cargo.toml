@@ -1,6 +1,6 @@
 [package]
 name = "fast-litellm"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2021"
 rust-version = "1.70"
 description = "High-performance Rust acceleration for LiteLLM"

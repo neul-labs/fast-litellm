@@ -640,9 +640,9 @@ def temporary_disable_feature(feature_name: str):
         with _feature_manager._lock:
             if feature_name in _feature_manager._features:
                 original_state = _feature_manager._features[feature_name].state
-                _feature_manager._features[
-                    feature_name
-                ].state = _feature_manager.FeatureState.DISABLED
+                _feature_manager._features[feature_name].state = (
+                    _feature_manager.FeatureState.DISABLED
+                )
 
         yield
 
