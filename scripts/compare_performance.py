@@ -34,15 +34,15 @@ class Colors:
 
 def print_header(text: str):
     """Print a formatted header"""
-    print(f"\n{Colors.BOLD}{Colors.HEADER}{'='*70}{Colors.ENDC}")
+    print(f"\n{Colors.BOLD}{Colors.HEADER}{'=' * 70}{Colors.ENDC}")
     print(f"{Colors.BOLD}{Colors.HEADER}{text:^70}{Colors.ENDC}")
-    print(f"{Colors.BOLD}{Colors.HEADER}{'='*70}{Colors.ENDC}\n")
+    print(f"{Colors.BOLD}{Colors.HEADER}{'=' * 70}{Colors.ENDC}\n")
 
 
 def print_section(text: str):
     """Print a section header"""
     print(f"\n{Colors.BOLD}{Colors.CYAN}{text}{Colors.ENDC}")
-    print(f"{Colors.CYAN}{'-'*len(text)}{Colors.ENDC}")
+    print(f"{Colors.CYAN}{'-' * len(text)}{Colors.ENDC}")
 
 
 def run_tests(
@@ -74,10 +74,10 @@ def run_tests(
 import sys
 import pytest
 
-{'import fast_litellm' if with_acceleration else '# Fast LiteLLM disabled for baseline'}
+{"import fast_litellm" if with_acceleration else "# Fast LiteLLM disabled for baseline"}
 
 def pytest_configure(config):
-    marker = "{'ACCELERATED' if with_acceleration else 'BASELINE'}"
+    marker = "{"ACCELERATED" if with_acceleration else "BASELINE"}"
     print(f"\\n{marker} TEST RUN\\n")
 """
 
@@ -145,7 +145,7 @@ def print_comparison(baseline: Tuple, accelerated: Tuple):
     )
 
     print(f"{'Metric':<30} {'Baseline':<15} {'Accelerated':<15} {'Improvement':<15}")
-    print(f"{'-'*30} {'-'*15} {'-'*15} {'-'*15}")
+    print(f"{'-' * 30} {'-' * 15} {'-' * 15} {'-' * 15}")
 
     print(
         f"{'Execution Time':<30} {baseline_time:>12.2f}s  {accel_time:>12.2f}s  ",
@@ -154,7 +154,7 @@ def print_comparison(baseline: Tuple, accelerated: Tuple):
     if speedup > 1:
         print(f"{Colors.GREEN}{speedup:>10.2f}x faster{Colors.ENDC}")
     elif speedup < 1 and speedup > 0:
-        print(f"{Colors.RED}{1/speedup:>10.2f}x slower{Colors.ENDC}")
+        print(f"{Colors.RED}{1 / speedup:>10.2f}x slower{Colors.ENDC}")
     else:
         print(f"{Colors.YELLOW}N/A{Colors.ENDC}")
 

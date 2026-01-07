@@ -98,16 +98,13 @@ jobs:
 
     - name: Install Python linting tools
       run: |
-        uv add --dev black isort flake8 mypy
+        uv add --dev ruff mypy
 
     - name: Check Python formatting
-      run: uv run black --check fast_litellm/ tests/ scripts/ examples/
-
-    - name: Check Python imports
-      run: uv run isort --check-only fast_litellm/ tests/ scripts/ examples/
+      run: uv run ruff format --check fast_litellm/ tests/ scripts/ examples/
 
     - name: Lint Python
-      run: uv run flake8 fast_litellm/ tests/
+      run: uv run ruff check fast_litellm/ tests/
 
     - name: Type check Python
       run: uv run mypy fast_litellm/

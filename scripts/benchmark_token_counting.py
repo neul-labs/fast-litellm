@@ -289,9 +289,9 @@ def print_comparison(comparison: Dict[str, Any]):
     else:
         rating = "⚠️  Rust implementation slower"
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"🎯 PERFORMANCE RATING: {rating}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
 
 def main():
