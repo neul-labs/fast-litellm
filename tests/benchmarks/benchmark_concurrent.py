@@ -238,7 +238,6 @@ def benchmark_multiprocess_rust_vs_python():
     # For multiprocessing, we need to be careful since Rust modules might not pickle well
     # We'll run separate processes for each
 
-
     concurrent_requests = 1000
     process_count = 10
 
