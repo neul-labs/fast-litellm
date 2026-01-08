@@ -239,10 +239,16 @@ jobs:
 
     - name: Trigger publish workflow
       if: steps.cargo_version.outputs.changed == 'true'
-      uses: peter-evans/workflow-dispatch@v4
+      uses: actions/github-script@v7
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        repository: ${{ github.repository }}
-        workflow: publish.yml
-        ref: ${{ github.ref }}
-        inputs: '{"version": "${{ steps.cargo_version.outputs.version }}"}'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'publish.yml',
+            ref: '${{ github.ref }}',
+            inputs: {
+              version: '${{ steps.cargo_version.outputs.version }}'
+            }
+          })
