@@ -7,8 +7,6 @@
 
 High-performance Rust acceleration for [LiteLLM](https://github.com/BerriAI/litellm) - providing significant performance improvements for connection pooling, rate limiting, and memory-intensive workloads.
 
-Created by [Dipankar Sarkar](https://www.dipankar.name) at [Neul Labs](https://www.neul.uk).
-
 ## Why Fast LiteLLM?
 
 Fast LiteLLM is a drop-in Rust acceleration layer for LiteLLM that provides targeted performance improvements where it matters most:
