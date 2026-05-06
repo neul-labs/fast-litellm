@@ -138,9 +138,11 @@ jobs:
 
     - name: Run Python security check
       run: |
+        # Export production dependencies only (skip dev dependencies)
+        uv export --no-dev --no-emit-project -o /tmp/requirements.txt
         # Ignore vulnerabilities in litellm's transitive dependencies
         # These need to be fixed upstream in litellm, not fast-litellm
-        uv run pip-audit \
+        uv run pip-audit --requirement /tmp/requirements.txt \
           --ignore-vuln CVE-2025-14546 \
           --ignore-vuln CVE-2025-66416 \
           --ignore-vuln CVE-2025-69277
