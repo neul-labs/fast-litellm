@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-05-07
+
+### Security
+- Updated `aiohttp` to `>=3.13.4` to resolve multiple CVEs (CVE-2026-34513, CVE-2026-34515, CVE-2026-34516, CVE-2026-34517)
+
+### Changed
+- Updated Rust dependencies via `cargo update` including `rand` 0.8.6, `bytes` 1.11.1, `tokio` 1.52.2, and other transitive updates
+
+## [0.1.7] - 2026-01-09
+
+### Changed
+- Updated acceleration of LiteLLM proxy
+- Documentation improvements
+
 ## [0.1.0] - 2024-12-10
 
 ### Added
