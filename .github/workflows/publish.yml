@@ -187,20 +187,22 @@ jobs:
 
       - name: Generate checksums
         run: |
+          mkdir -p checksums
           cd dist
-          sha256sum * > checksums.txt
+          sha256sum * > ../checksums/checksums.txt
           echo "Generated checksums:"
-          cat checksums.txt
+          cat ../checksums/checksums.txt
 
       - name: Upload checksums
         uses: actions/upload-artifact@v4
         with:
           name: checksums
-          path: dist/checksums.txt
+          path: checksums/checksums.txt
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          packages-dir: dist
           skip-existing: true
 
       - uses: actions/checkout@v4
@@ -208,7 +210,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          files: |
+            dist/*
+            checksums/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
