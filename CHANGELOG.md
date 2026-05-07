@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.10] - 2026-05-07
+
+### Fixed
+- Fixed PyPI publish workflow: moved checksums out of `dist/` to prevent `InvalidDistribution` error
+
 ## [0.1.9] - 2026-05-07
 
 ### Fixed
