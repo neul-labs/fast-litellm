@@ -125,7 +125,7 @@ jobs:
     environment: pypi
 
     steps:
-      - name: Download all artifacts
+      - name: Download wheels and sdist
         uses: actions/download-artifact@v4
         with:
           pattern: wheels-*
@@ -172,8 +172,6 @@ jobs:
         with:
           packages-dir: dist
           skip-existing: true
-
-      - uses: actions/checkout@v4
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
