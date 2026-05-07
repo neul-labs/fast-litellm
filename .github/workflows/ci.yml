@@ -246,12 +246,13 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
+          const version = '${{ steps.cargo_version.outputs.version }}';
           await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
             repo: context.repo.repo,
             workflow_id: 'publish.yml',
-            ref: '${{ github.ref }}',
+            ref: `refs/tags/v${version}`,
             inputs: {
-              version: '${{ steps.cargo_version.outputs.version }}'
+              version: version
             }
           })

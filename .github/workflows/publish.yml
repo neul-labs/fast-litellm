@@ -116,38 +116,6 @@ jobs:
           name: wheels-sdist
           path: dist
 
-  test-release:
-    name: Test PyPI Release
-    needs: [build-linux, build-windows, build-macos, build-sdist]
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    if: github.event_name == 'workflow_dispatch'
-    environment: test-release
-
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: wheels-*
-          path: dist
-          merge-multiple: true
-
-      - name: Publish to Test PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          skip-existing: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Test installation from Test PyPI
-        run: |
-          pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ fast-litellm
-          python -c "import fast_litellm; print('Package installed successfully')"
-
   release:
     name: Release to PyPI
     needs: [build-linux, build-windows, build-macos, build-sdist]
