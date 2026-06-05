@@ -88,5 +88,9 @@ Rust is **not** required for installation - prebuilt wheels are available for al
 - [Installation Guide](getting-started/installation.md) - Detailed installation instructions
 - [Quick Start](getting-started/quickstart.md) - Get up and running in minutes
 - [Features Overview](features/overview.md) - Learn about all accelerated components
+- [Proxy Integration](guides/proxy-integration.md) - Deploy with the LiteLLM proxy under gunicorn, Docker, or systemd
+- [Architecture](development/architecture.md) - How the Python and Rust layers fit together
 - [API Reference](api/reference.md) - Complete API documentation
+- [Troubleshooting](guides/troubleshooting.md) - Diagnose installation and runtime issues
+- [Changelog](release-notes/changelog.md) - Release history
 - [Neul Labs](https://www.neul.uk) - About the team building Fast LiteLLM

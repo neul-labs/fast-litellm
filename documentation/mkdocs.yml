@@ -1,9 +1,10 @@
 site_name: Fast LiteLLM
 site_description: High-performance Rust acceleration for LiteLLM by Neul Labs
-site_url: https://neul-labs.github.io/fast-litellm/
+site_url: https://fast-litellm.docs.neullabs.com/
 site_author: Dipankar Sarkar (Neul Labs)
 repo_url: https://github.com/neul-labs/fast-litellm
 repo_name: neul-labs/fast-litellm
+edit_uri: edit/main/documentation/docs/
 
 theme:
   name: material
@@ -75,8 +76,16 @@ nav:
     - Configuration: guides/configuration.md
     - Performance Tuning: guides/performance.md
     - Monitoring: guides/monitoring.md
+    - Proxy Integration: guides/proxy-integration.md
+    - Troubleshooting: guides/troubleshooting.md
   - API Reference: api/reference.md
   - Benchmarks: benchmarks.md
+  - Development:
+    - Architecture: development/architecture.md
+    - Contributing: development/contributing.md
+  - Release Notes:
+    - Changelog: release-notes/changelog.md
+    - Compatibility: release-notes/compatibility.md
 
 extra:
   social:
