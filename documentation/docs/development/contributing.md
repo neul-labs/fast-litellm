@@ -1,6 +1,6 @@
 # Contributing
 
-Fast LiteLLM is maintained by Dipankar Sarkar at [Neul Labs](https://www.neul.uk) ([me@dipankar.name](mailto:me@dipankar.name)). Contributions are welcome.
+Fast LiteLLM is maintained by Dipankar Sarkar at [Neul Labs](https://fast-litellm.neullabs.com) ([me@dipankar.name](mailto:me@dipankar.name)). Contributions are welcome.
 
 ## Prerequisites
 

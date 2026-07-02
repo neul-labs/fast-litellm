@@ -93,6 +93,6 @@ extra:
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/fast-litellm/
     - icon: fontawesome/solid/globe
-      link: https://www.neul.uk
+      link: https://fast-litellm.neullabs.com
 
 copyright: Copyright &copy; 2026 Dipankar Sarkar / Neul Labs
