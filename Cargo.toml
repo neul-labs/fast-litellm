@@ -3,9 +3,10 @@ name = "fast-litellm"
 version = "0.1.10"
 edition = "2021"
 rust-version = "1.70"
-description = "High-performance Rust acceleration for LiteLLM"
-authors = ["Dipankar Sarkar <me@dipankar.name>"]
-homepage = "https://www.neul.uk"
+description = "Drop-in Rust acceleration for LiteLLM."
+authors = ["Neul Labs <contact@neullabs.com>"]
+homepage = "https://fast-litellm.neullabs.com"
+documentation = "https://docs.neullabs.com/fast-litellm"
 license = "MIT"
 repository = "https://github.com/neul-labs/fast-litellm"
 

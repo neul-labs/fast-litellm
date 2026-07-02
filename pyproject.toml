@@ -4,14 +4,14 @@ build-backend = "maturin"
 
 [project]
 name = "fast-litellm"
-description = "High-performance Rust acceleration for LiteLLM"
+description = "Drop-in Rust acceleration for LiteLLM."
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [
-    {name = "Dipankar Sarkar", email = "me@dipankar.name"}
+    {name = "Neul Labs", email = "contact@neullabs.com"}
 ]
 maintainers = [
-    {name = "Neul Labs"}
+    {name = "Neul Labs", email = "contact@neullabs.com"}
 ]
 # Version is dynamically read from Cargo.toml by maturin
 dynamic = ["version"]
@@ -56,8 +56,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/neul-labs/fast-litellm"
-Documentation = "https://github.com/neul-labs/fast-litellm/tree/main/docs"
+Homepage = "https://fast-litellm.neullabs.com"
+Documentation = "https://docs.neullabs.com/fast-litellm"
 Repository = "https://github.com/neul-labs/fast-litellm.git"
 "Bug Tracker" = "https://github.com/neul-labs/fast-litellm/issues"
 Changelog = "https://github.com/neul-labs/fast-litellm/blob/main/CHANGELOG.md"
