@@ -1,25 +1,25 @@
 # Compatibility Report
 
-Generated: 2026-08-09 03:46:16 UTC
+Generated: 2026-08-16 03:02:56 UTC
 
 ## Test Matrix Results
 
 | Platform | Python Versions | Fast LiteLLM | LiteLLM | Rust | Tests | Status |
 |----------|-----------------|--------------|---------|------|-------|--------|
-| Linux | 3.11.15 | 0.1.10 | 1.83.14 | ✅ | N/A | ✅ Pass |
+| Linux | 3.11.16 | 0.1.10 | 1.83.14 | ✅ | N/A | ✅ Pass |
 
 ## Platform Summary
 
 ### Linux ✅
 
-- **Tested Python versions**: 3.11.15
+- **Tested Python versions**: 3.11.16
 - **Passed**: 1/1
 
 ## Python Version Summary
 
 | Python Version | Platforms Passed | Platforms Failed | Status |
 |----------------|------------------|------------------|--------|
-| 3.11.15 | 1 | 0 | ✅ |
+| 3.11.16 | 1 | 0 | ✅ |
 
 ## Tested Versions
 
